@@ -10,5 +10,5 @@
 #'
 #' @keywords internal
 #' @importFrom stats cor cov dnorm median p.adjust pchisq plogis qlogis
-#'   quantile rbinom rchisq rnorm sd setNames
+#'   quantile rbinom rchisq rnorm sd setNames coef confint vcov simulate
 "_PACKAGE"
