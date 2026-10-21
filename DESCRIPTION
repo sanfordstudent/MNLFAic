@@ -1,0 +1,27 @@
+Package: aDIFic
+Title: Anchor-Free DIF Inference with Item Covariates in Moderated
+    Nonlinear Factor Analysis
+Version: 0.0.0.9000
+Authors@R: 
+    person("Sanford R.", "Student", , "sanford.r.student@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-7419-2437"))
+Description: Estimation and inference for differential item functioning
+    (DIF) in moderated nonlinear factor analysis with item covariates,
+    without anchor items. Item difficulty DIF with respect to any number
+    of continuous or categorical person covariates is decomposed into a
+    part explained by item covariates and item-specific residual DIF,
+    identified by a sparsity assumption that generalizes the minimal-L1
+    condition of Chen et al. (2023).
+    Inference uses a threshold-centered parametric bootstrap.
+License: GPL (>= 3)
+Encoding: UTF-8
+Language: en-US
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Imports: 
+    MASS,
+    quantreg,
+    stats
