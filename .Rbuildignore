@@ -4,3 +4,4 @@
 ^dev$
 ^\.github$
 ^README\.Rmd$
+^tests/testthat/fixtures/fixture_long\.rds$
