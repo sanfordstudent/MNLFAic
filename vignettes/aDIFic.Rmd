@@ -266,7 +266,7 @@ acquisition, all DIF is far from sparse, so that assumption is doubtful.
 - **Clustered persons (experimental).** `cluster = "school"` (a column of
   `person_data`, or a vector) adds a cluster-robust covariance for inference.
 - **Checking a fitted model.** `simulate(fit, nsim)` generates data sets from
-  the fitted model, which can be analysed again to check how the procedure
+  the fitted model, which can be analyzed again to check how the procedure
   performs in a design like yours.
 
 ## References

@@ -24,8 +24,16 @@ Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical
 inference without knowing anchoring items. \emph{Psychometrika, 88}, 1097-1122.
 \doi{10.1007/s11336-023-09930-9}
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/sanfordstudent/aDIFic}
+  \item Report bugs at \url{https://github.com/sanfordstudent/aDIFic/issues}
+}
+
+}
 \author{
-\strong{Maintainer}: Sanford R. Student \email{sanford.r.student@gmail.com} (\href{https://orcid.org/0000-0001-7419-2437}{ORCID})
+\strong{Maintainer}: Sanford R. Student \email{sanford.r.student@gmail.com} (\href{https://orcid.org/0000-0001-7419-2437}{ORCID}) [copyright holder]
 
 }
 \keyword{internal}

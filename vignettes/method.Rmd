@@ -39,7 +39,7 @@ $$
 
 DIF is split into a part explained by the item covariates, with **item-covariate
 effects** $\gamma_c$, and item-specific **residual DIF** $\varepsilon_{jc}$.
-Slopes do not depend on the covariates (only uniform DIF is modelled).
+Slopes do not depend on the covariates (only uniform DIF is modeled).
 
 **Coding of item covariates.** Continuous item covariates are centered at their
 mean over items (and standardized by default). Categorical ones are
