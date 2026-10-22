@@ -1,8 +1,8 @@
 ---
-title: "Getting started with aDIFic"
+title: "Getting started with MNLFAic"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting started with aDIFic}
+  %\VignetteIndexEntry{Getting started with MNLFAic}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 options(width = 100)
 ```
 
-aDIFic tests for differential item functioning (DIF) with respect to several
+MNLFAic tests for differential item functioning (DIF) with respect to several
 person covariates at once, without anchor items, and lets item covariates
 explain part of the DIF. For example, in a vocabulary test, words might differ
 in how much easier they are for girls, and part of that difference might be
@@ -28,11 +28,11 @@ covariates and reports:
   with Benjamini-Hochberg flags.
 
 No items need to be declared DIF-free. Instead, the model is identified by
-assuming that residual DIF is sparse. `vignette("method", package = "aDIFic")`
+assuming that residual DIF is sparse. `vignette("method", package = "MNLFAic")`
 describes the model and the procedure.
 
 ```{r}
-library(aDIFic)
+library(MNLFAic)
 ```
 
 ## Example data

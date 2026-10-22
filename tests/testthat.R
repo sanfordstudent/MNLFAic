@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(aDIFic)
+library(MNLFAic)
 
-test_check("aDIFic")
+test_check("MNLFAic")

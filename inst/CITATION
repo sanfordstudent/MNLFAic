@@ -2,12 +2,12 @@
 bibentry(
   bibtype = "Manual",
   header = "To cite the package and the method with item covariates, use:",
-  title = "{aDIFic}: Anchor-Free {DIF} Inference with Item Covariates in Moderated Nonlinear Factor Analysis",
+  title = "{MNLFAic}: Anchor-Free {DIF} Inference with Item Covariates in Moderated Nonlinear Factor Analysis",
   author = person("Sanford R.", "Student"),
   year = "2026",
   note = paste("R package version", meta$Version),
-  url = "https://github.com/sanfordstudent/aDIFic",
-  textVersion = paste0("Student, S. R. (2026). aDIFic: Anchor-free DIF inference with item covariates ",
+  url = "https://github.com/sanfordstudent/MNLFAic",
+  textVersion = paste0("Student, S. R. (2026). MNLFAic: Anchor-free DIF inference with item covariates ",
                        "in moderated nonlinear factor analysis. R package version ", meta$Version, ".")
 )
 bibentry(

@@ -65,7 +65,7 @@ items DIF-free (anchors). With item covariates there is a second
 indeterminacy: only the sum $w_j^\top \gamma_c + \varepsilon_{jc}$ is
 determined, not its two parts.
 
-aDIFic replaces anchors with a **sparsity assumption** on residual DIF: among
+MNLFAic replaces anchors with a **sparsity assumption** on residual DIF: among
 all parameter values that fit the data equally well, the true one has the
 smallest slope-weighted total residual DIF,
 

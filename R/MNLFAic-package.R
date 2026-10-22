@@ -1,4 +1,4 @@
-#' aDIFic: anchor-free DIF inference with item covariates in MNLFA
+#' MNLFAic: anchor-free DIF inference with item covariates in MNLFA
 #'
 #' Estimation and inference for uniform (difficulty) differential item
 #' functioning in moderated nonlinear factor analysis with item covariates,
@@ -7,7 +7,7 @@
 #' 2023).
 #'
 #' The main function is [mnlfa_ic()]; see [summary.mnlfa_ic()], [dif_table()]
-#' and [diagnose()] for its results. `vignette("aDIFic")` works through an
+#' and [diagnose()] for its results. `vignette("MNLFAic")` works through an
 #' example, and `vignette("method")` describes the model and the procedure.
 #'
 #' The package is under development; the user-facing interface is not final.

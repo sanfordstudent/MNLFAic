@@ -3,7 +3,7 @@
 .RData
 .Ruserdata
 *.Rcheck/
-aDIFic_*.tar.gz
+MNLFAic_*.tar.gz
 inst/doc
 docs/
 /doc/

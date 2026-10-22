@@ -1,4 +1,4 @@
-# aDIFic 0.0.0.9000
+# MNLFAic 0.0.0.9000
 
 * First version: anchor-free inference for uniform (difficulty) DIF in
   moderated nonlinear factor analysis with person and item covariates

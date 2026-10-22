@@ -1,6 +1,4 @@
-# aDIFic
-
-*Working name ("automated DIF with item covariates"); the final package name is still to be decided.*
+# MNLFAic
 
 Anchor-free estimation and inference for differential item functioning (DIF) in moderated nonlinear factor analysis (MNLFA) with item covariates.
 
@@ -14,13 +12,13 @@ Anchor-free estimation and inference for differential item functioning (DIF) in 
 
 ```r
 # install.packages("remotes")
-remotes::install_github("sanfordstudent/aDIFic", build_vignettes = TRUE)
+remotes::install_github("sanfordstudent/MNLFAic", build_vignettes = TRUE)
 ```
 
 ## Example
 
 ```r
-library(aDIFic)
+library(MNLFAic)
 
 # responses: N x J matrix of 0/1 (NA allowed)
 # persons:   data frame with one row per person (female, age centered)
@@ -35,11 +33,11 @@ dif_table(fit, flagged_only = TRUE) # item-level results
 diagnose(fit)                       # checks of the identifying assumption
 ```
 
-See `vignette("aDIFic")` for a worked example on simulated data, and `vignette("method")` for the model and the procedure.
+See `vignette("MNLFAic")` for a worked example on simulated data, and `vignette("method")` for the model and the procedure.
 
 ## Citation
 
-`citation("aDIFic")`. The method without item covariates is from:
+`citation("MNLFAic")`. The method without item covariates is from:
 
 Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical inference without knowing anchoring items. *Psychometrika, 88*, 1097-1122. <https://doi.org/10.1007/s11336-023-09930-9>
 
