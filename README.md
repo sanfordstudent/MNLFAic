@@ -41,7 +41,7 @@ See `vignette("aDIFic")` for a worked example on simulated data, and `vignette("
 
 `citation("aDIFic")`. The method without item covariates is from:
 
-Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical inference without knowing anchoring items. *Psychometrika, 88*, 1097-1122.
+Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical inference without knowing anchoring items. *Psychometrika, 88*, 1097-1122. <https://doi.org/10.1007/s11336-023-09930-9>
 
 ## Licence
 

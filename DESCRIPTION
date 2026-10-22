@@ -11,7 +11,7 @@ Description: Estimation and inference for differential item functioning
     of continuous or categorical person covariates is decomposed into a
     part explained by item covariates and item-specific residual DIF,
     identified by a sparsity assumption that generalizes the minimal-L1
-    condition of Chen et al. (2023).
+    condition of Chen et al. (2023) <doi:10.1007/s11336-023-09930-9>.
     Inference uses a threshold-centered parametric bootstrap.
 License: GPL (>= 3)
 Encoding: UTF-8

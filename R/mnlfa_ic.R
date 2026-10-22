@@ -52,6 +52,7 @@
 #'   [dif_table()], [coef.mnlfa_ic()], [diagnose()].
 #' @references Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical
 #'   inference without knowing anchoring items. *Psychometrika, 88*, 1097-1122.
+#'   \doi{10.1007/s11336-023-09930-9}
 #' @examples
 #' # Small example (a real analysis would use more persons, items and draws)
 #' sim <- simulate_mnlfa_ic(

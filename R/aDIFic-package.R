@@ -14,6 +14,7 @@
 #'
 #' @references Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical
 #'   inference without knowing anchoring items. *Psychometrika, 88*, 1097-1122.
+#'   \doi{10.1007/s11336-023-09930-9}
 #' @keywords internal
 #' @importFrom stats cor cov dnorm median p.adjust pchisq plogis qlogis
 #'   quantile rbinom rchisq rnorm sd setNames coef confint vcov simulate

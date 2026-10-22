@@ -22,6 +22,7 @@ The package is under development; the user-facing interface is not final.
 \references{
 Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical
 inference without knowing anchoring items. \emph{Psychometrika, 88}, 1097-1122.
+\doi{10.1007/s11336-023-09930-9}
 }
 \author{
 \strong{Maintainer}: Sanford R. Student \email{sanford.r.student@gmail.com} (\href{https://orcid.org/0000-0001-7419-2437}{ORCID})

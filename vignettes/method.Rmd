@@ -135,7 +135,7 @@ Other limitations of the current version:
 ## References
 
 Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical inference
-without knowing anchoring items. *Psychometrika, 88*, 1097-1122.
+without knowing anchoring items. *Psychometrika, 88*, 1097-1122. <https://doi.org/10.1007/s11336-023-09930-9>
 
 Fang, Z., & Santos, A. (2019). Inference on directionally differentiable
 functions. *The Review of Economic Studies, 86*, 377-412.

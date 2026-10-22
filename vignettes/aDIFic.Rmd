@@ -272,4 +272,4 @@ acquisition, all DIF is far from sparse, so that assumption is doubtful.
 ## References
 
 Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical inference
-without knowing anchoring items. *Psychometrika, 88*, 1097-1122.
+without knowing anchoring items. *Psychometrika, 88*, 1097-1122. <https://doi.org/10.1007/s11336-023-09930-9>

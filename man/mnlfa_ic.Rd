@@ -97,4 +97,5 @@ summary(fit)
 \references{
 Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical
 inference without knowing anchoring items. \emph{Psychometrika, 88}, 1097-1122.
+\doi{10.1007/s11336-023-09930-9}
 }
