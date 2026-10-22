@@ -20,24 +20,27 @@ remotes::install_github("sanfordstudent/MNLFAic", build_vignettes = TRUE)
 ```r
 library(MNLFAic)
 
-# Simulated vocabulary test: 1,000 children (gender, centered age), 30 words
-# (age of acquisition, part of speech). Verbs are harder for girls, later-acquired
-# words get easier with age, and word 4 has item-specific gender DIF.
+# Simulated mathematics test: 1,000 students (English-learner status, grade 3-5
+# centered at 4), 30 items (reading load, content area). Reading-heavy items are
+# harder for English learners, geometry items get easier with grade, the spread
+# of ability grows with grade, and item 4 has item-specific English-learner DIF.
 set.seed(1)
-persons <- data.frame(female = rbinom(1000, 1, 0.5), age = runif(1000, -1.5, 1.5))
-words <- data.frame(aoa = rnorm(30, 5, 1.5), pos = rep(c("noun", "verb", "adjective"), 10))
-effects <- rbind(aoa = c(0, -0.25), pos_adjective = c(0, 0), pos_verb = c(0.3, 0))
+persons <- data.frame(el = rbinom(1000, 1, 0.3), grade = sample(3:5, 1000, replace = TRUE) - 4)
+items <- data.frame(reading = round(runif(30, 10, 80)),
+                    domain = rep(c("number", "geometry", "data"), 10))
+effects <- rbind(reading = c(0.3, 0), domain_data = c(0, 0), domain_geometry = c(0, -0.25))
 residual <- matrix(0, 30, 2); residual[4, 1] <- 0.6
-sim <- simulate_mnlfa_ic(persons, ~ female + age, words, ~ aoa + pos,
-                         slopes = runif(30, 0.8, 2), intercepts = rnorm(30), impact = c(0.2, 0.5),
+sim <- simulate_mnlfa_ic(persons, ~ el + grade, items, ~ reading + domain,
+                         slopes = runif(30, 0.8, 2), intercepts = rnorm(30),
+                         impact = c(-0.4, 0.5), variance_impact = c(0, 0.2),
                          effects = effects, residual_dif = residual,
-                         item_omit = list(pos = "noun"), seed = 1)
+                         item_omit = list(domain = "number"), seed = 1)
 
 # responses: N x J matrix of 0/1 (NA allowed); one row of person_data per person,
 # one row of item_data per item
-fit <- mnlfa_ic(sim$responses, person_data = persons, person = ~ female + age,
-                item_data = words, item = ~ aoa + pos,
-                control = mnlfa_control(item_omit = list(pos = "noun"), seed = 1))
+fit <- mnlfa_ic(sim$responses, person_data = persons, person = ~ el + grade,
+                item_data = items, item = ~ reading + domain,
+                control = mnlfa_control(item_omit = list(domain = "number"), seed = 1))
 
 fit                                 # impact and the number of flagged items
 summary(fit)                        # impact, item-covariate effects, flagged residual DIF
