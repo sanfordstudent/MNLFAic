@@ -1,0 +1,24 @@
+# TODO before release: replace the package entry with the paper once it is published.
+bibentry(
+  bibtype = "Manual",
+  header = "To cite the package and the method with item covariates, use:",
+  title = "{aDIFic}: Anchor-Free {DIF} Inference with Item Covariates in Moderated Nonlinear Factor Analysis",
+  author = person("Sanford R.", "Student"),
+  year = "2026",
+  note = paste("R package version", meta$Version),
+  url = "https://github.com/sanfordstudent/aDIFic",
+  textVersion = paste0("Student, S. R. (2026). aDIFic: Anchor-free DIF inference with item covariates ",
+                       "in moderated nonlinear factor analysis. R package version ", meta$Version, ".")
+)
+bibentry(
+  bibtype = "Article",
+  header = "The anchor-free method without item covariates is from:",
+  title = "{DIF} Statistical Inference Without Knowing Anchoring Items",
+  author = c(person("Yunxiao", "Chen"), person("Chengcheng", "Li"), person("Jing", "Ouyang"), person("Gongjun", "Xu")),
+  journal = "Psychometrika",
+  year = "2023",
+  volume = "88",
+  pages = "1097--1122",
+  textVersion = paste("Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical inference without",
+                      "knowing anchoring items. Psychometrika, 88, 1097-1122.")
+)

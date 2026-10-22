@@ -13,7 +13,15 @@ residual DIF (a generalization of the minimal-L1 condition of Chen et al.,
 2023).
 }
 \details{
+The main function is \code{\link[=mnlfa_ic]{mnlfa_ic()}}; see \code{\link[=summary.mnlfa_ic]{summary.mnlfa_ic()}}, \code{\link[=dif_table]{dif_table()}}
+and \code{\link[=diagnose]{diagnose()}} for its results. \code{vignette("aDIFic")} works through an
+example, and \code{vignette("method")} describes the model and the procedure.
+
 The package is under development; the user-facing interface is not final.
+}
+\references{
+Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical
+inference without knowing anchoring items. \emph{Psychometrika, 88}, 1097-1122.
 }
 \author{
 \strong{Maintainer}: Sanford R. Student \email{sanford.r.student@gmail.com} (\href{https://orcid.org/0000-0001-7419-2437}{ORCID})

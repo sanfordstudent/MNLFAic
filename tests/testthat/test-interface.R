@@ -138,6 +138,8 @@ test_that("methods: print, summary, coef, confint, vcov, dif_table, diagnose", {
   expect_equal(nrow(dg$margin), 2)
   expect_true(all(dg$margin$rho >= 0))
   expect_false(is.null(dg$tolerance))
+  expect_true(all(dg$design$leverage_top$item %in% fit$data$items))
+  expect_output(print(dg), "Identification margin")
   expect_equal(nrow(diagnose(fit, flags = "offplane", tolerance = FALSE)$margin), 2)
 })
 

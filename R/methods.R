@@ -154,12 +154,14 @@ confint.mnlfa_ic <- function(object, parm = c("impact", "variance", "effects", "
   if (!isTRUE(all.equal(level, object$control$level)))
     stop("The inference was run at level ", object$control$level, "; use infer(object, level = ", level, ").", call. = FALSE)
   inf <- object$inference
-  switch(parm,
+  out <- switch(parm,
     impact = inf$impact[, c("covariate", "est", "ci_low", "ci_high")],
     effects = if (!is.null(inf$category_effects)) inf$category_effects[, c("covariate", "term", "est", "ci_low", "ci_high")] else
               if (!is.null(inf$gamma)) inf$gamma[, c("term", "est", "ci_low", "ci_high")] else NULL,
     residual = dif_table(object)[, c("item", "covariate", "est", "ci_low", "ci_high")],
     total = dif_table(object, type = "total")[, c("item", "covariate", "est", "ci_low", "ci_high")])
+  if (!is.null(out)) rownames(out) <- NULL
+  out
 }
 
 #' @export
@@ -229,8 +231,10 @@ dif_table <- function(object, type = c("residual", "total"), flagged_only = FALS
 #'   highest 10% of each continuous one.
 #' @param tolerance Compute the tolerance table.
 #' @param n_random Number of random orders in the tolerance table.
-#' @return A list with `margin` (data frame), `tolerance` (data frame or
-#'   `NULL`) and `design` (list).
+#' @return A list of class `mnlfa_ic_diagnostics` with `margin` (data frame),
+#'   `tolerance` (data frame or `NULL`), `design` (list: correlations of slopes
+#'   with item covariates, condition number, highest-leverage items) and
+#'   `flags`.
 #' @export
 diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, tolerance = TRUE, n_random = 200) {
   flags <- match.arg(flags)
@@ -265,5 +269,32 @@ diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, 
     }
     tol <- .ml1_tolerance_table(f$alpha.vec, W, groups, sign = 1, metric = metric, n_random = n_random)
   }
-  list(margin = margin, tolerance = tol, design = .ml1_design_report(f$alpha.vec, W, metric))
+  design <- .ml1_design_report(f$alpha.vec, W, metric)
+  design$leverage_top$item <- d$items[design$leverage_top$item]
+  rownames(design$leverage_top) <- NULL
+  structure(list(margin = margin, tolerance = tol, design = design, flags = flags),
+            class = "mnlfa_ic_diagnostics")
+}
+
+#' @export
+print.mnlfa_ic_diagnostics <- function(x, digits = 3, ...) {
+  lab <- c(p05 = "unadjusted p < .05", bh = "Benjamini-Hochberg flags", offplane = "cells off the fitted plane")
+  cat(sprintf("Identification margin rho from %s (rho < 1 required; > 0.4 is a warning sign):\n", lab[[x$flags]]))
+  m <- x$margin; m$rho <- round(m$rho, digits)
+  print(m, row.names = FALSE)
+  if (!is.null(x$tolerance)) {
+    cat("\nTolerance: same-signed residual-DIF items each group could absorb before identification fails\n",
+        "(by_lambda: highest-slope items first; random_median / random_p05: over random orders):\n", sep = "")
+    print(x$tolerance, row.names = FALSE)
+  }
+  ds <- x$design
+  cat(sprintf("\nStage-2 design: %d items, %d columns; condition number %.2f\n", ds$J, ds$p, ds$condition_number))
+  if (!is.null(ds$cor_slope_with_W)) {
+    cat("Correlation of slopes with item covariates:\n")
+    print(round(ds$cor_slope_with_W, digits))
+  }
+  cat(sprintf("Highest-leverage items (mean leverage %.3f):\n", ds$leverage_mean))
+  lt <- ds$leverage_top; lt$leverage <- round(lt$leverage, digits)
+  print(lt, row.names = FALSE)
+  invisible(x)
 }

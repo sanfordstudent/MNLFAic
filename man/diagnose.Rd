@@ -28,8 +28,10 @@ highest 10\% of each continuous one.}
 \item{n_random}{Number of random orders in the tolerance table.}
 }
 \value{
-A list with \code{margin} (data frame), \code{tolerance} (data frame or
-\code{NULL}) and \code{design} (list).
+A list of class \code{mnlfa_ic_diagnostics} with \code{margin} (data frame),
+\code{tolerance} (data frame or \code{NULL}), \code{design} (list: correlations of slopes
+with item covariates, condition number, highest-leverage items) and
+\code{flags}.
 }
 \description{
 The plug-in identification margin rho per person covariate (rho < 1 is

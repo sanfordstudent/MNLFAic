@@ -1,0 +1,275 @@
+---
+title: "Getting started with aDIFic"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with aDIFic}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(width = 100)
+```
+
+aDIFic tests for differential item functioning (DIF) with respect to several
+person covariates at once, without anchor items, and lets item covariates
+explain part of the DIF. For example, in a vocabulary test, words might differ
+in how much easier they are for girls, and part of that difference might be
+explained by the words' part of speech or age of acquisition. The package fits
+a two-parameter logistic moderated nonlinear factor analysis (MNLFA) with item
+covariates and reports:
+
+- **impact**: differences in the latent trait associated with each person
+  covariate;
+- **item-covariate effects**: how DIF depends on the characteristics of the
+  items;
+- **residual DIF**: item-specific DIF that the item covariates do not explain,
+  with Benjamini-Hochberg flags.
+
+No items need to be declared DIF-free. Instead, the model is identified by
+assuming that residual DIF is sparse. `vignette("method", package = "aDIFic")`
+describes the model and the procedure.
+
+```{r}
+library(aDIFic)
+```
+
+## Example data
+
+We simulate a 30-word vocabulary test taken by 1,000 children. Person
+covariates are gender (`female`, 0/1) and age (in years, centered at the sample
+mean). Item covariates are each word's age of acquisition (`aoa`, in years) and
+part of speech (`pos`).
+
+```{r}
+set.seed(2026)
+N <- 1000; J <- 30
+persons <- data.frame(female = rbinom(N, 1, 0.5),
+                      age = round(runif(N, -1.5, 1.5), 2))
+words <- data.frame(item = sprintf("word%02d", 1:J),
+                    aoa = round(rnorm(J, 5, 1.5), 1),
+                    pos = rep(c("noun", "verb", "adjective"), length.out = J))
+head(words)
+```
+
+The simulated truth:
+
+- **impact:** girls are 0.2 SD higher, and each year of age adds 0.5 SD;
+- **DIF explained by item covariates:** verbs are 0.3 SD harder for girls than
+  the average word, nouns 0.3 SD easier, and adjectives are no different; each
+  SD of age of acquisition makes a word 0.25 SD easier per year of age;
+- **residual DIF:** four words have item-specific DIF, two for gender and two
+  for age.
+
+`simulate_mnlfa_ic()` codes the item covariates by the same rules as the
+analysis (see below), so the effects refer to the coded columns.
+
+```{r}
+effects <- matrix(0, 3, 2, dimnames = list(c("aoa", "pos_adjective", "pos_verb"),
+                                           c("female", "age")))
+effects["pos_verb", "female"] <- 0.3
+effects["aoa", "age"] <- -0.25
+residual <- matrix(0, J, 2)
+residual[c(4, 17), 1] <- c(0.6, -0.5)
+residual[c(9, 25), 2] <- c(0.5, 0.4)
+
+sim <- simulate_mnlfa_ic(persons, ~ female + age, words, ~ aoa + pos,
+                         slopes = round(runif(J, 0.8, 2), 2),
+                         intercepts = round(rnorm(J), 2),
+                         impact = c(0.2, 0.5), effects = effects,
+                         residual_dif = residual,
+                         item_omit = list(pos = "noun"), seed = 1)
+responses <- sim$responses
+dim(responses)
+```
+
+## Fitting the model
+
+```{r}
+fit <- mnlfa_ic(responses, person_data = persons, person = ~ female + age,
+                item_data = words, item = ~ aoa + pos,
+                control = mnlfa_control(item_omit = list(pos = "noun"),
+                                        M = 2000, seed = 1))
+fit
+```
+
+The arguments are:
+
+- `responses`: an N x J matrix or data frame of 0/1 responses. Missing
+  responses (`NA`) are allowed; they are handled by full-information maximum
+  likelihood, which assumes they are missing at random.
+- `person_data` and `person`: a data frame with one row per person, and a
+  one-sided formula. The formula is expanded without an intercept: numeric
+  variables enter as they are, factors as 0/1 dummies, and `a * b` adds the
+  product. The person with every covariate at 0 is the reference (latent mean
+  0, variance 1), so center continuous covariates yourself if 0 is not a
+  meaningful value.
+- `item_data` and `item`: a data frame with one row per item, in the order of
+  the columns of `responses`, and a one-sided formula. If `item_data` has an
+  `item` column, it must match the column names of `responses`. Continuous
+  item covariates are centered over items and, by default, standardized, so
+  their effects are per SD of the item covariate. Categorical item covariates
+  are effect-coded: each category's effect is relative to the average over
+  categories, and the effect of the level named in `item_omit` (default: the
+  first level) is implied as minus the sum of the others.
+- `control`: settings from `mnlfa_control()`. The default number of bootstrap
+  draws is `M = 10000`; we use 2,000 here to keep the vignette fast. `seed`
+  makes the bootstrap reproducible without changing your own random-number
+  stream.
+
+The fit has three stages: a maximum-likelihood fit with DIF free for every
+item; a weighted median regression that picks, among the many equivalent
+solutions, the one in which residual DIF is sparsest; and a parametric
+bootstrap for inference. The print-out reports whether Stage 1 converged.
+
+```{r}
+fit$timing
+```
+
+## Reading the results
+
+`summary()` collects the main tables.
+
+```{r}
+summary(fit)
+```
+
+All DIF quantities are on the **difficulty scale**: shifts in item difficulty
+in latent-SD units, per unit of the person covariate, with positive values
+meaning **harder** for persons with higher values of the covariate (here: for
+girls, or for older children).
+
+- **Impact on the latent mean**: the gender and age differences in vocabulary
+  after DIF has been separated out. The intervals are symmetric bootstrap
+  intervals.
+- **Impact on the latent log-variance**: whether the spread of the latent
+  trait depends on the covariates (Wald tests from Stage 1).
+- **Item-covariate effects on DIF**: how DIF depends on the items'
+  characteristics. Here verbs are about 0.3 SD harder for girls than the
+  average word and nouns about 0.3 SD easier, while age of acquisition explains
+  age DIF (words acquired later become easier, relative to the others, as
+  children get older). The row for the omitted category (`pos_noun`) is the
+  implied effect, with its own interval.
+- **Joint tests**: whether a categorical item covariate matters at all for a
+  person covariate (a Wald test with the bootstrap covariance; bootstrap and
+  chi-square p-values).
+- **Impact for an item of each category**: the gender or age difference that
+  an item of each category, with no residual DIF, would show. For girls, nouns
+  would show a larger difference and verbs a smaller one than the overall
+  impact.
+- **Residual DIF flagged**: items whose DIF is not explained by the item
+  covariates, flagged by the Benjamini-Hochberg procedure at a 5% false
+  discovery rate across all items and person covariates.
+- **Identification margin**: a check of the sparsity assumption (see
+  [Checking the identifying assumption](#checking-the-identifying-assumption)).
+
+### Item-level results
+
+`dif_table()` gives one row per item and person covariate, with residual DIF,
+its interval and p-values, and the split of total DIF into the part explained
+by the item covariates and the residual.
+
+```{r}
+dt <- dif_table(fit)
+names(dt)
+cols <- c("item", "covariate", "est", "ci_low", "ci_high", "p_bh", "flag", "total", "explained", "pos")
+num <- sapply(dt, is.numeric)
+dt[num] <- round(dt[num], 3)
+head(dt[, cols])
+dt[dt$flag, cols]
+```
+
+Items whose residual DIF is estimated as exactly 0 (such as `word05` for
+gender) lie on the fitted plane of the Stage-2 regression; with no residual
+DIF, their DIF is entirely explained by their item covariates.
+
+`dif_table(fit, type = "total")` reports total DIF (explained plus residual)
+with its own intervals and p-values instead.
+
+### Extracting estimates
+
+`coef()` and `confint()` return single tables, and `vcov()` the Stage-1
+covariance matrix.
+
+```{r}
+coef(fit, "impact")
+coef(fit, "effects")
+confint(fit, "effects")
+```
+
+## Checking the identifying assumption
+
+The model is identified by assuming that, for each person covariate, residual
+DIF is sparse: the slope-weighted total of absolute residual DIF is smallest at
+the true values. Roughly, items with residual DIF must be a minority, and with
+a categorical item covariate, roughly a minority within each category.
+`diagnose()` reports three checks.
+
+```{r}
+diagnose(fit)
+```
+
+- **Margin rho**, computed from the cells with unadjusted p < .05: the
+  assumption requires rho < 1. Undetected residual DIF makes this plug-in
+  value too optimistic, so treat it as a one-sided warning: values above about
+  0.4 suggest that intervals for item-covariate effects may be too narrow,
+  while a low value is not a guarantee.
+- **Tolerance**: how many same-signed residual-DIF items each group of items
+  (each category, and the items with the lowest and highest 10% of each
+  continuous covariate) could contain before the assumption fails.
+- **Design**: correlations of the slopes with the item covariates (high values
+  make impact hard to separate from item-covariate DIF), the condition number,
+  and the items with the most leverage.
+
+## Without item covariates
+
+With `item = NULL` (the default), the analysis is Chen et al.'s (2023)
+anchor-free method, here for several person covariates at once: impact and
+item-specific DIF, identified by sparsity of all DIF.
+
+```{r}
+fit0 <- mnlfa_ic(responses, persons, ~ female + age,
+                 control = mnlfa_control(M = 2000, seed = 1))
+fit0
+```
+
+Without item covariates, DIF that is shared by a group of items (here, verbs
+for gender and words with late or early age of acquisition for age) can only
+be reported item by item. The sparsity assumption then concerns all DIF rather
+than residual DIF, and impact refers to a different reference point. In these
+data, where most words' DIF follows their part of speech or age of
+acquisition, all DIF is far from sparse, so that assumption is doubtful.
+
+## Practical notes
+
+- **Run time.** Stage 1 dominates. With 30 items and 1,000 persons it takes a
+  few seconds; with 267 items and 1,190 persons about a minute and a half.
+  Stage 3 with the default 10,000 draws adds about 10 to 15 seconds at that
+  size.
+- **Changing inference settings.** `infer()` reruns the bootstrap with new
+  settings, reusing the Stage-1 fit, e.g. `infer(fit, M = 10000, seed = 2)` or
+  `infer(fit, level = 0.9)`.
+- **Sparse items.** Items with very few correct or incorrect responses,
+  overall or within a group of a binary person covariate, give a warning:
+  their DIF is poorly determined and can destabilize the fit. Consider
+  screening out near-ceiling and near-floor items.
+- **Missing person covariates.** By default `mnlfa_ic()` stops if any person
+  covariate is missing; `na_action = "omit"` drops those persons with a
+  message.
+- **Convergence.** Check that the print-out says Stage 1 converged. A fit that
+  did not converge should not be used for inference.
+- **Parameterization.** `mnlfa_control(form = "slope-intercept")` states DIF
+  and item-covariate effects as shifts in logits instead of difficulties. With
+  item covariates the two forms are different models, not rescalings of each
+  other.
+- **Clustered persons (experimental).** `cluster = "school"` (a column of
+  `person_data`, or a vector) adds a cluster-robust covariance for inference.
+- **Checking a fitted model.** `simulate(fit, nsim)` generates data sets from
+  the fitted model, which can be analysed again to check how the procedure
+  performs in a design like yours.
+
+## References
+
+Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical inference
+without knowing anchoring items. *Psychometrika, 88*, 1097-1122.

@@ -5,3 +5,7 @@
 ^\.github$
 ^README\.Rmd$
 ^tests/testthat/fixtures/fixture_long\.rds$
+^doc$
+^Meta$
+^doc$
+^Meta$
