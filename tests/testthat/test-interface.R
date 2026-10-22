@@ -59,6 +59,13 @@ test_that("input errors", {
   it2 <- d$items; it2$item <- rev(it2$item)
   expect_error(mnlfa_ic(r, d$pd, ~ female, it2, ~ aoa), "do not match")
   expect_error(mnlfa_ic(r, d$pd, ~ female, d$items, ~ aoa * pos), "Interactions")
+  # numeric row names left over from subsetting are not item names
+  it_sub <- d$items[c(10, 1:9), ][order(c(10, 1:9)), ]; it_sub$item <- NULL
+  expect_false(is.null(.prepare_items(~ aoa, it_sub, colnames(r))))
+  # responses without column names take item names from item_data
+  r_un <- unname(r)
+  p_un <- .prepare_all(r_un, d$pd, ~ female, d$items, ~ aoa, NULL, ctl_fast(), "fail")
+  expect_identical(colnames(p_un$dat), d$items$item)
   expect_error(mnlfa_ic(r, d$pd, ~ female, NULL, ~ aoa), "item_data")
   pd2 <- d$pd; pd2$female[5] <- NA
   expect_error(mnlfa_ic(r, pd2, ~ female), "missing person covariates")

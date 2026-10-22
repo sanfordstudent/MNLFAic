@@ -11,10 +11,22 @@
   storage.mode(dat) <- "double"
   if (any(!(dat[!is.na(dat)] %in% c(0, 1)))) stop("`responses` must contain only 0, 1 and NA.", call. = FALSE)
   if (ncol(dat) < 3) stop("At least 3 items are needed.", call. = FALSE)
-  if (is.null(nm)) nm <- paste0("Item", seq_len(ncol(dat)))
+  named <- !is.null(nm)
+  if (!named) nm <- paste0("Item", seq_len(ncol(dat)))
   colnames(dat) <- nm
   rownames(dat) <- NULL
+  attr(dat, "named") <- named
   dat
+}
+
+# Item identifiers in item_data: an `item` column, or row names unless they are
+# just numbers (e.g. left over from subsetting a data frame). NULL if none.
+.item_ids <- function(item_data) {
+  if (is.null(item_data)) return(NULL)
+  if ("item" %in% names(item_data)) return(as.character(item_data$item))
+  rn <- rownames(item_data)
+  if (!is.null(rn) && !all(grepl("^[0-9]+$", rn))) return(rn)
+  NULL
 }
 
 # Person covariates from a one-sided formula: model.matrix() without the
@@ -66,11 +78,10 @@
   if (!is.data.frame(item_data)) stop("`item_data` must be a data frame.", call. = FALSE)
   if (nrow(item_data) != J)
     stop("`item_data` has ", nrow(item_data), " rows but there are ", J, " items.", call. = FALSE)
-  ids <- if ("item" %in% names(item_data)) as.character(item_data$item) else
-         if (!identical(rownames(item_data), as.character(seq_len(J)))) rownames(item_data) else NULL
+  ids <- .item_ids(item_data)
   if (!is.null(ids) && !identical(ids, item_names))
-    stop("The items in `item_data` (its `item` column or row names) do not match the columns of `responses` ",
-         "in the same order.", call. = FALSE)
+    stop("The items in `item_data` (its `item` column or row names) do not match the column names of ",
+         "`responses` in the same order.", call. = FALSE)
   tt <- stats::terms(item, data = item_data)
   if (any(attr(tt, "order") > 1))
     stop("Interactions in the `item` formula are not supported; build the product as a column of `item_data`.", call. = FALSE)
@@ -127,6 +138,10 @@
 .prepare_all <- function(responses, person_data, person, item_data, item, cluster, control, na_action) {
   dat <- .prepare_responses(responses)
   N0 <- nrow(dat)
+  # without column names in `responses`, take item names from item_data
+  ids <- if (!is.null(item)) .item_ids(item_data) else NULL
+  if (!attr(dat, "named") && !is.null(ids) && length(ids) == ncol(dat)) colnames(dat) <- ids
+  attr(dat, "named") <- NULL
   pp <- .prepare_person(person, person_data, N0)
   cl <- .prepare_cluster(cluster, person_data)
   if (!is.null(cl) && length(cl) != N0)

@@ -45,7 +45,7 @@ NULL
 #' @rdname stage-functions
 #' @export
 mnlfa_fit <- function(responses, x, start = NULL, cluster = NULL, control = mnlfa_control()) {
-  dat <- .prepare_responses(responses); x <- as.matrix(x)
+  dat <- .prepare_responses(responses); attr(dat, "named") <- NULL; x <- as.matrix(x)
   if (nrow(x) != nrow(dat)) stop("`x` must have one row per person.", call. = FALSE)
   if (is.null(colnames(x))) colnames(x) <- paste0("x", seq_len(ncol(x)))
   if (is.null(start)) start <- .default_start(dat, ncol(x))
