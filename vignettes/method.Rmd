@@ -13,19 +13,19 @@ This vignette summarizes the model and the procedure implemented by
 ## The model
 
 For person $i$ with person covariates $x_i = (x_{i1}, \dots, x_{iK})$ (no
-intercept; for example gender and centered age) and item $j$ with item
+intercept; for example English-learner status and centered grade) and item $j$ with item
 covariates $w_j$ (coded as described below), the probability of a correct
 response is a two-parameter logistic model whose item intercepts depend on the
 person covariates,
 
 $$
 \operatorname{logit} P(y_{ij} = 1 \mid \theta_i)
-  = \lambda_j \theta_i + \nu_{0j} + \sum_{c=1}^{K} \nu_{jc}\, x_{ic},
+  = \lambda_{0j} \theta_i + \nu_{0j} + \sum_{c=1}^{K} \nu_{jc}\, x_{ic},
 \qquad
 \theta_i \sim N\big(x_i^\top \alpha,\ \exp(x_i^\top \omega)\big).
 $$
 
-- $\lambda_j$ and $\nu_{0j}$ are the slope and intercept of item $j$ for the
+- $\lambda_{0j}$ and $\nu_{0j}$ are the slope and intercept of item $j$ for the
   reference person (all covariates 0, latent mean 0 and variance 1).
 - $\alpha$ is **impact** on the latent mean and $\omega$ impact on the latent
   log-variance.
@@ -34,7 +34,7 @@ $$
   item difficulty, in latent-SD units, with positive values meaning harder:
 
 $$
-b_{jc} = -\nu_{jc} / \lambda_j = w_j^\top \gamma_c + \varepsilon_{jc}.
+b_{jc} = -\nu_{jc} / \lambda_{0j} = w_j^\top \gamma_c + \varepsilon_{jc}.
 $$
 
 DIF is split into a part explained by the item covariates, with **item-covariate
@@ -42,11 +42,14 @@ effects** $\gamma_c$, and item-specific **residual DIF** $\varepsilon_{jc}$.
 Slopes do not depend on the covariates (only uniform DIF is modeled).
 
 **Coding of item covariates.** Continuous item covariates are centered at their
-mean over items (and standardized by default). Categorical ones are
+mean over items and, by default, standardized. Categorical item covariates are
 effect-coded, so each category's effect is relative to the average over
-categories. Because the DIF model has no intercept, this coding fixes the point
-at which explained DIF is zero; what is not explained there is attributed to
-impact or residual DIF.
+categories. With this coding, all item covariates are 0 for an average item:
+one at the mean of each continuous covariate and averaged over the categories
+of each categorical one. Because the DIF model has no intercept, an average
+item has no explained DIF, and impact is the group difference on an average
+item without residual DIF. In the difficulty form, the coding does not change
+residual DIF or which items are flagged.
 
 **The slope-intercept form.** With `form = "slope-intercept"`, DIF is stated in
 logits instead, $\nu_{jc} = w_j^\top \gamma_c + \varepsilon_{jc}$ (positive =
@@ -58,10 +61,10 @@ can give different impact estimates.
 ## Why anchors are usually needed, and what replaces them
 
 The likelihood does not change if a constant $\delta_c$ is added to impact
-$\alpha_c$ and subtracted from every item's difficulty DIF $b_{jc}$: a
-difference between groups can be described as a difference in the trait or as
-every item being harder. Conventional analyses resolve this by declaring some
-items DIF-free (anchors). With item covariates there is a second
+$\alpha_c$ and to every item's difficulty DIF $b_{jc}$: a difference between
+groups can be described as a difference in the trait or as every item being
+harder. Conventional analyses resolve this indeterminacy by specifying some
+items as DIF-free (anchors). With item covariates there is a second
 indeterminacy: only the sum $w_j^\top \gamma_c + \varepsilon_{jc}$ is
 determined, not its two parts.
 
@@ -70,19 +73,20 @@ all parameter values that fit the data equally well, the true one has the
 smallest slope-weighted total residual DIF,
 
 $$
-\sum_{j=1}^{J} \lambda_j \,\lvert \varepsilon_{jc} \rvert ,
+\sum_{j=1}^{J} \lambda_{0j} \,\lvert \varepsilon_{jc} \rvert ,
 $$
 
 separately for each person covariate $c$. On the logit scale this is the sum
-of absolute residual DIF, so without item covariates it is exactly the
-minimal-L1 condition of Chen et al. (2023). Two consequences:
+of absolute residual DIF, generalizing the minimal-L1 identification condition
+given by Chen et al. (2023). This means that:
 
 - The assumption applies to each column of the person design separately, so
-  the coding of the person covariates (for example, dummy coding of a factor,
-  or including a product term) is part of the identifying assumption.
-- Roughly, items with residual DIF must be a minority, and with a categorical
-  item covariate, roughly a minority within each category. The precise
-  condition can be checked for a given pattern of residual DIF; its margin
+  the coding of the person covariates (for example, dummy coding of a factor)
+  is part of the identifying assumption.
+- In practice, items with residual DIF in the same direction must be fewer
+  than half of the items, both overall and within each category of a
+  categorical item covariate (the exact condition weights items by their
+  slopes). It can be checked for a given pattern of residual DIF; its margin
   $\rho$ must be below 1 (`diagnose()`, `ml1_condition_check()`).
 
 ## The three stages
@@ -93,10 +97,11 @@ minimal-L1 condition of Chen et al. (2023). Two consequences:
    covariates play no role here. Integration over $\theta$ uses adaptive
    Gauss-Hermite quadrature; optimization uses a short EM warm start followed
    by Newton steps with the observed information.
-2. **Stage 2: the identification step.** For each person covariate, a weighted
-   median regression of the anchored difficulty DIF estimates on an intercept
-   and the item covariates, with the slopes as weights, chooses the
-   representative that minimizes the criterion above. Its residuals are the
+2. **Stage 2: the identification step.** For each person covariate, Stage 2
+   regresses the Stage-1 difficulty DIF estimates (relative to the bookkeeping
+   item) on an intercept and the item covariates, using a weighted median
+   regression with the slopes as weights. Among the solutions that fit equally
+   well, this picks the one that minimizes the criterion above. Its residuals are the
    residual DIF estimates, its coefficients the item-covariate effects, and its
    intercept moves impact to its identified value.
 3. **Stage 3: inference.** A parametric bootstrap draws Stage-1 estimates from
@@ -104,11 +109,13 @@ minimal-L1 condition of Chen et al. (2023). Two consequences:
    Because Stage 2 is not a smooth function near the truth (items with no
    residual DIF sit exactly on the fitted plane), the draws are centered at a
    modified estimate in which residual DIF smaller than a threshold
-   ($\sqrt{2 \log \log N}$ standard errors) is set to 0 (threshold centering).
+   ($\sqrt{2 \log \log N}$ standard errors) is set to 0 (threshold centering;
+   Fang & Santos, 2019).
    - Intervals are symmetric for impact and item-covariate effects, and
      equal-tailed for residual and total DIF.
-   - p-values for residual DIF are computed on the logit scale, and residual
-     DIF is flagged by the Benjamini-Hochberg procedure across all items and
+   - p-values for residual DIF are computed on the logit scale, because
+     difficulty-scale draws divide by each draw's slope and are heavy-tailed;
+     residual DIF is flagged by the Benjamini-Hochberg procedure across all items and
      person covariates.
    - Categorical item covariates get a joint Wald test per person covariate.
 
@@ -117,11 +124,11 @@ Wald intervals from Stage 1.
 
 ## Performance and limitations
 
-In the simulations for the paper, residual-DIF tests held their nominal Type I
-error and false discovery rate, and intervals for impact and item-covariate
-effects had close to nominal coverage when residual DIF was sparse. The main
-limitation is **dense and lopsided residual DIF**: when many items have
-residual DIF of the same sign (for example 30% of the items, mostly in one
+In simulation studies, residual-DIF tests held their nominal Type I error and
+false discovery rate, and intervals for impact and item-covariate effects had
+close to nominal coverage when residual DIF was sparse. The main limitation is
+**dense and asymmetric residual DIF**: when many items have residual DIF of the
+same sign (for example, 30% of the items, a substantial majority in the same
 direction), the Stage-2 estimates are biased and the intervals for
 item-covariate effects undercover. The diagnostics in `diagnose()` flag some,
 but not all, of these situations.
@@ -130,7 +137,10 @@ Other limitations of the current version:
 
 - uniform DIF only (slopes do not depend on covariates);
 - one latent dimension and binary items;
-- the cluster-robust covariance (`cluster =`) is experimental.
+- the cluster-robust covariance (`cluster =`) is experimental;
+- the sparsity assumption cannot be tested from the data: `diagnose()` checks
+  whether the estimated pattern of residual DIF satisfies the sparsity
+  condition, but the assumption concerns the true, unknown pattern.
 
 ## References
 
