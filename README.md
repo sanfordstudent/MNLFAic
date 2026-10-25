@@ -3,7 +3,7 @@
 Anchor-free estimation and inference for differential item functioning (DIF) in moderated nonlinear factor analysis (MNLFA) with item covariates.
 
 - **Model:** a two-parameter logistic MNLFA in which any number of continuous or categorical person covariates affect the latent mean, the latent variance and every item's difficulty. Each item's DIF is split into a part explained by item covariates (e.g., a word's part of speech or age of acquisition) and item-specific residual DIF.
-- **Identification:** no anchor items. The model is identified by assuming that residual DIF is sparse, which generalizes the minimal-L1 condition of Chen et al. (2023). Without item covariates, the analysis is Chen et al.'s method for an arbitrary number of continuous or categorical covariates.
+- **Identification:** no anchor items. The model is identified by assuming that residual DIF is sparse, which generalizes the minimal-L1 condition of Chen et al. (2023). Without item covariates, the analysis is Chen et al.'s method extended to an arbitrary number of continuous or categorical covariates.
 - **Inference:** a threshold-centered parametric bootstrap: the model estimates are redrawn from their estimated sampling distribution and the identification step is repeated on each draw, with the draws centered at estimates in which residual DIF smaller than a threshold (in standard errors) is set to zero. It gives intervals and tests for impact, item-covariate effects and item-specific DIF, with Benjamini-Hochberg flags for residual DIF and diagnostics for the identifying assumption.
 
 **Status:** under development (version 0.0.0.9000). The interface may still change.

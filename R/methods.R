@@ -28,7 +28,7 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
   cat("MNLFA with item covariates: anchor-free DIF analysis\n")
   cat(sprintf("  %d persons, %d items; person covariates: %s\n", d$N, d$J, paste(d$covariates, collapse = ", ")))
   des <- x$coding$design
-  cat("  item covariates:", if (is.null(des)) "none (Chen et al.'s method)" else paste(names(des$coding), collapse = ", "), "\n")
+  cat("  item covariates:", if (is.null(des)) "none" else paste(names(des$coding), collapse = ", "), "\n")
   cat(sprintf("  form: %s; Stage 1 %s (%d Newton steps, %d EM fallbacks)%s\n", x$control$form,
               if (f$convergence$converged) "converged" else "DID NOT CONVERGE",
               f$convergence$newton_iterations, f$convergence$em_fallbacks,

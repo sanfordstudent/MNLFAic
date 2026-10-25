@@ -41,8 +41,8 @@ must match the column names of \code{responses}.}
 Numeric variables are centered at their unweighted mean over items (and
 standardized by default); factors and character variables are
 effect-coded (see \code{\link[=mnlfa_control]{mnlfa_control()}}). \code{NULL} (default): no item
-covariates; the analysis is then Chen et al.'s anchor-free method for any
-number of person covariates.}
+covariates; the analysis is then Chen et al.'s anchor-free method extended
+to an arbitrary number of continuous or categorical person covariates.}
 
 \item{cluster}{Optional cluster identifier (vector with one value per
 person, or the name of a column of \code{person_data}). Adds a cluster-robust

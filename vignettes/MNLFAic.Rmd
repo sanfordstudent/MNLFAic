@@ -54,17 +54,17 @@ items <- data.frame(item = sprintf("item%02d", 1:J),
 head(items)
 ```
 
-The simulated truth:
+Data are generated from the following model.
 
-- **impact on the mean:** English learners are 0.4 SD lower, and each grade
-  adds 0.5 SD;
-- **impact on the variance:** the log-variance rises by 0.2 per grade (the SD
-  grows by about 10% per grade); English learners and other students are
-  equally variable;
+- **impact on the mean:** English learners are 0.4 SD lower, and the mean
+  increases by 0.5 SD for each grade level;
+- **impact on the variance:** the log-variance increases by 0.2 per grade
+  (variances of 0.82, 1 and 1.22 in grades 3, 4 and 5); English learner status
+  has no effect on variance;
 - **DIF explained by item covariates:** each SD of reading load makes an item
-  0.3 SD harder for English learners; geometry items become 0.25 SD easier per
-  grade than the average item, number items 0.25 SD harder, and data items are
-  no different;
+  0.3 SD harder for English learners; geometry items are 0.25 SD easier per
+  grade than the average item, number items 0.25 SD harder, and there is no
+  item covariate-driven DIF effect on data items;
 - **residual DIF:** four items have item-specific DIF, two for English-learner
   status and two for grade.
 
@@ -104,26 +104,37 @@ fit
 The arguments are:
 
 - `responses`: an N x J matrix or data frame of 0/1 responses. Missing
-  responses (`NA`) are allowed; they are handled by full-information maximum
-  likelihood, which assumes they are missing at random.
-- `person_data` and `person`: a data frame with one row per person, and a
-  one-sided formula. The formula is expanded without an intercept: numeric
-  variables enter as they are, factors as 0/1 dummies, and `a * b` adds the
-  product. The person with every covariate at 0 is the reference (latent mean
-  0, variance 1), so center continuous covariates yourself if 0 is not a
-  meaningful value.
-- `item_data` and `item`: a data frame with one row per item, in the order of
-  the columns of `responses`, and a one-sided formula. If `item_data` has an
-  `item` column, it must match the column names of `responses`. Continuous
-  item covariates are centered over items and, by default, standardized, so
-  their effects are per SD of the item covariate. Categorical item covariates
-  are effect-coded: each category's effect is relative to the average over
-  categories, and the effect of the level named in `item_omit` (default: the
-  first level) is implied as minus the sum of the others.
+  responses (`NA`) are allowed; estimation uses full-information maximum
+  likelihood.
+- `person_data`: a data frame with one row per person, in the order of the
+  rows of `responses`, with the person covariates as columns.
+- `person`: a one-sided formula with no intercept consisting of person
+  covariates, e.g. `~ el + grade`. Factors are automatically converted to 0/1
+  dummies. Continuous covariates are not rescaled automatically. The person
+  with every covariate at 0 is the reference (latent mean 0, variance 1), so it
+  may be advisable to rescale continuous person covariates so that 0 has a
+  meaningful value (e.g., centering or standardizing).
+- `item_data`: a data frame with one row per item, in the order of the columns
+  of `responses`. If it has an `item` column, it must match the column names of
+  `responses`.
+- `item`: a one-sided formula of item covariates, e.g. `~ reading + domain`.
+  Continuous item covariates are centered over items and, by default,
+  standardized, so their effects are per SD of the item covariate. Categorical
+  item covariates are effect-coded: each category's effect is relative to the
+  average over categories, and the effect of the level named in `item_omit`
+  (default: the first level) is implied as minus the sum of the others.
 - `control`: settings from `mnlfa_control()`. The default number of bootstrap
   draws is `M = 10000`; we use 2,000 here to keep the vignette fast. `seed`
   makes the bootstrap reproducible without changing your own random-number
   stream.
+
+Item covariates are centered and effect-coded by default because their coding
+only changes what impact refers to: impact is the group difference on an item
+with all item covariates at 0, which these defaults make an item of average
+reading load, averaged over content areas. Residual DIF and flags do not depend
+on this choice, and item-covariate effects change only in their units or
+reference category. The coding of person covariates, in contrast, can change
+the results, so it is left to the user.
 
 The fit has three stages: a maximum-likelihood fit with DIF free for every
 item; a weighted median regression that picks, among the many equivalent
@@ -150,24 +161,24 @@ English learners, or for students in higher grades).
 - **Impact on the latent mean**: the English-learner and grade differences in
   mathematics after DIF has been separated out. The intervals are symmetric bootstrap
   intervals.
-- **Impact on the latent log-variance**: whether the spread of the latent
-  trait depends on the covariates (Wald tests from Stage 1). Here the spread
-  grows with grade and does not differ for English learners.
+- **Impact on the latent log-variance**: whether the variance of the latent
+  trait depends on the covariates. Here the variance grows with grade and does
+  not differ for English learners.
 - **Item-covariate effects on DIF**: how DIF depends on the items'
   characteristics. Here each SD of reading load makes an item about 0.27 SD
   harder for English learners, while content area explains grade DIF:
-  relative to the average item, geometry items become easier in higher grades
+  relative to the average item, geometry items are easier in higher grades
   (about 0.23 SD per grade) and number items harder (about 0.20 SD). The row
   for the omitted category (`domain_number`) is the implied effect, with its
   own interval.
-- **Joint tests**: whether a categorical item covariate matters at all for a
-  person covariate (a Wald test with the bootstrap covariance; bootstrap and
-  chi-square p-values).
+- **Joint tests**: tests whether a categorical item covariate explains a
+  non-zero amount of DIF with respect to a given person covariate (a Wald test
+  with the bootstrap covariance; bootstrap and chi-square p-values).
 - **Impact for an item of each category**: the English-learner or grade
   difference that an item of each category, with no residual DIF, would show.
   Per grade, geometry items would show a larger difference and number items a
   smaller one than the overall impact.
-- **Residual DIF flagged**: items whose DIF is not explained by the item
+- **Residual DIF flagged**: items with additional DIF not explained by the item
   covariates, flagged by the Benjamini-Hochberg procedure at a 5% false
   discovery rate across all items and person covariates.
 - **Identification margin**: a check of the sparsity assumption (see
@@ -182,6 +193,7 @@ by the item covariates and the residual.
 ```{r}
 dt <- dif_table(fit)
 names(dt)
+on_plane <- abs(dt$est) < 1e-8
 cols <- c("item", "covariate", "est", "ci_low", "ci_high", "p_bh", "flag", "total", "explained",
           "reading", "domain")
 num <- sapply(dt, is.numeric)
@@ -192,15 +204,20 @@ dt[dt$flag, cols]
 
 Items whose residual DIF is estimated as exactly 0 lie on the fitted plane of
 the Stage-2 regression; with no residual DIF, their DIF is entirely explained
-by their item covariates.
+by their item covariates. There are at least as many of them per person
+covariate as there are columns in the Stage-2 regression (here 4: the
+intercept, reading load and two content-area columns).
+
+```{r}
+dt[on_plane, cols]
+```
 
 `dif_table(fit, type = "total")` reports total DIF (explained plus residual)
 with its own intervals and p-values instead.
 
 ### Extracting estimates
 
-`coef()` and `confint()` return single tables, and `vcov()` the Stage-1
-covariance matrix.
+`coef()` and `confint()` return single tables.
 
 ```{r}
 coef(fit, "impact")
@@ -212,19 +229,21 @@ confint(fit, "effects")
 
 The model is identified by assuming that, for each person covariate, residual
 DIF is sparse: the slope-weighted total of absolute residual DIF is smallest at
-the true values. Roughly, items with residual DIF must be a minority, and with
-a categorical item covariate, roughly a minority within each category.
-`diagnose()` reports three checks.
+the true values. In practice, items with residual DIF in the same direction
+must be fewer than half of the items, both overall and within each category of
+a categorical item covariate (the exact condition weights items by their
+slopes). `diagnose()` reports three checks.
 
 ```{r}
 diagnose(fit)
 ```
 
 - **Margin rho**, computed from the cells with unadjusted p < .05: the
-  assumption requires rho < 1. Undetected residual DIF makes this plug-in
-  value too optimistic, so treat it as a one-sided warning: values above about
-  0.4 suggest that intervals for item-covariate effects may be too narrow,
-  while a low value is not a guarantee.
+  assumption requires rho < 1. Note that rho is estimated, and tends to be too
+  low when residual DIF goes undetected, so it is provided as an approximate
+  diagnostic, not a formal test of identification. Simulations suggest that a
+  value above about 0.4 may indicate weaker identification, which results in
+  confidence intervals for item-covariate effects that are too narrow.
 - **Tolerance**: how many same-signed residual-DIF items each group of items
   (each category, and the items with the lowest and highest 10% of each
   continuous covariate) could contain before the assumption fails.
@@ -235,9 +254,9 @@ diagnose(fit)
 ## Without item covariates
 
 With `item = NULL` (the default), the analysis is Chen et al.'s (2023)
-anchor-free method, here for an arbitrary number of continuous or categorical
-person covariates: impact and item-specific DIF, identified by sparsity of all
-DIF.
+anchor-free method extended to an arbitrary number of continuous or
+categorical person covariates. The model will estimate impact and
+item-specific DIF, identified by sparsity of all DIF.
 
 ```{r}
 fit0 <- mnlfa_ic(responses, persons, ~ el + grade,
@@ -245,13 +264,9 @@ fit0 <- mnlfa_ic(responses, persons, ~ el + grade,
 fit0
 ```
 
-Without item covariates, DIF that is shared by a group of items (here,
-reading-heavy items for English learners, and geometry and number items for
-grade) can only be reported item by item. The sparsity assumption then
-concerns all DIF rather than residual DIF, and impact refers to a different
-reference point. In these data, where most items' DIF follows their reading
-load or content area, all DIF is far from sparse, so that assumption is
-doubtful.
+Without item covariates, DIF is modeled as an item-by-item phenomenon with no
+shared explanation. The sparsity assumption is with respect to all DIF rather
+than DIF residual of item covariates.
 
 ## Practical notes
 

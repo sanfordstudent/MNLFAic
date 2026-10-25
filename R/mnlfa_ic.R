@@ -33,8 +33,8 @@
 #'   Numeric variables are centered at their unweighted mean over items (and
 #'   standardized by default); factors and character variables are
 #'   effect-coded (see [mnlfa_control()]). `NULL` (default): no item
-#'   covariates; the analysis is then Chen et al.'s anchor-free method for any
-#'   number of person covariates.
+#'   covariates; the analysis is then Chen et al.'s anchor-free method extended
+#'   to an arbitrary number of continuous or categorical person covariates.
 #' @param cluster Optional cluster identifier (vector with one value per
 #'   person, or the name of a column of `person_data`). Adds a cluster-robust
 #'   covariance for inference. Experimental.
