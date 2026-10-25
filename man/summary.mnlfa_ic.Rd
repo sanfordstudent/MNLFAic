@@ -17,8 +17,12 @@ An object of class \code{summary.mnlfa_ic} with tables \code{impact},
 categories), \code{joint} (joint tests per categorical item covariate),
 \code{category_impact} (impact for an item of each category with no residual
 DIF), \code{flagged} (residual DIF flagged by Benjamini-Hochberg) and
-\code{diagnostics} (plug-in identification margin per person covariate).
+\code{diagnostics} (estimated identification margin rho per person covariate).
 }
 \description{
-Summarize an mnlfa_ic fit
+The main results of an analysis: impact on the latent mean and
+log-variance, item-covariate effects on DIF, joint tests for categorical
+item covariates, impact for an item of each category, flagged residual DIF
+and the estimated identification margin. See \code{vignette("MNLFAic")} for how
+to read each table.
 }

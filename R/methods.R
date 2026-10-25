@@ -25,7 +25,7 @@
 #' @export
 print.mnlfa_ic <- function(x, digits = 3, ...) {
   d <- x$data; f <- x$stage1
-  cat("MNLFA with item covariates: anchor-free DIF analysis\n")
+  cat("MNLFA-IC: anchor-free DIF analysis\n")
   cat(sprintf("  %d persons, %d items; person covariates: %s\n", d$N, d$J, paste(d$covariates, collapse = ", ")))
   des <- x$coding$design
   cat("  item covariates:", if (is.null(des)) "none" else paste(names(des$coding), collapse = ", "), "\n")
@@ -51,6 +51,12 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
 
 #' Summarize an mnlfa_ic fit
 #'
+#' The main results of an analysis: impact on the latent mean and
+#' log-variance, item-covariate effects on DIF, joint tests for categorical
+#' item covariates, impact for an item of each category, flagged residual DIF
+#' and the estimated identification margin. See `vignette("MNLFAic")` for how
+#' to read each table.
+#'
 #' @param object An `mnlfa_ic` fit.
 #' @param ... Unused.
 #' @return An object of class `summary.mnlfa_ic` with tables `impact`,
@@ -58,7 +64,7 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
 #'   categories), `joint` (joint tests per categorical item covariate),
 #'   `category_impact` (impact for an item of each category with no residual
 #'   DIF), `flagged` (residual DIF flagged by Benjamini-Hochberg) and
-#'   `diagnostics` (plug-in identification margin per person covariate).
+#'   `diagnostics` (estimated identification margin rho per person covariate).
 #' @export
 summary.mnlfa_ic <- function(object, ...) {
   .need_inference(object)
@@ -82,7 +88,7 @@ summary.mnlfa_ic <- function(object, ...) {
 #' @export
 print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
   rnd <- function(df) { if (is.null(df)) return(NULL); num <- vapply(df, is.numeric, logical(1)); df[num] <- lapply(df[num], round, digits); df }
-  cat("MNLFA with item covariates: anchor-free DIF analysis\n")
+  cat("MNLFA-IC: anchor-free DIF analysis\n")
   cat(sprintf("%d persons, %d items, %d person covariate(s); form: %s; %g%% intervals%s\n", x$data$N, x$data$J,
               x$data$K, x$form, 100 * x$level, if (identical(x$vcov_type, "cluster")) "; cluster-robust" else ""))
   if (!x$convergence$converged) cat("WARNING: Stage 1 did not converge (", x$convergence$stop_reason, ").\n", sep = "")
@@ -100,7 +106,7 @@ print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
   if (nrow(x$flagged) == 0) cat("  none\n") else
     print(rnd(x$flagged[, c("item", "covariate", "est", "ci_low", "ci_high", "p_bh", "total")]), row.names = FALSE)
   if (!is.null(x$diagnostics)) {
-    cat("\nIdentification margin rho from cells with unadjusted p < .05 (rho < 1 required; > 0.4 is a warning sign):\n")
+    cat("\nIdentification margin rho from cells with unadjusted p < .05 (rho < 1 required; values above 0.4 may indicate weaker identification):\n")
     print(rnd(x$diagnostics), row.names = FALSE)
   }
   invisible(x)
@@ -279,7 +285,8 @@ diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, 
 #' @export
 print.mnlfa_ic_diagnostics <- function(x, digits = 3, ...) {
   lab <- c(p05 = "unadjusted p < .05", bh = "Benjamini-Hochberg flags", offplane = "cells off the fitted plane")
-  cat(sprintf("Identification margin rho from %s (rho < 1 required; > 0.4 is a warning sign):\n", lab[[x$flags]]))
+  cat(sprintf("Identification margin rho from %s (rho < 1 required; values above 0.4 may indicate weaker identification):\n",
+              lab[[x$flags]]))
   m <- x$margin; m$rho <- round(m$rho, digits)
   print(m, row.names = FALSE)
   if (!is.null(x$tolerance)) {
