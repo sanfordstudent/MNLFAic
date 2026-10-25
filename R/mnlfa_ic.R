@@ -55,19 +55,20 @@
 #'   (or cluster): `"fail"` (default) or `"omit"`.
 #'
 #' @return An object of class `mnlfa_ic`; see [summary.mnlfa_ic()],
-#'   [dif_table()], [coef.mnlfa_ic()], [diagnose()].
+#'   [dif_table()], [coef.mnlfa_ic()], [confint.mnlfa_ic()], [diagnose()] and
+#'   [infer()].
 #' @references Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical
 #'   inference without knowing anchoring items. *Psychometrika, 88*, 1097-1122.
 #'   \doi{10.1007/s11336-023-09930-9}
 #' @examples
 #' # Small example (a real analysis would use more persons, items and draws)
 #' sim <- simulate_mnlfa_ic(
-#'   person_data = data.frame(female = rep(0:1, 150)), person = ~ female,
-#'   item_data = data.frame(pos = rep(c("noun", "verb", "adj"), length.out = 9)),
-#'   item = ~ pos, slopes = rep(1.2, 9), intercepts = seq(-1, 1, length.out = 9),
-#'   impact = 0.3, seed = 1)
-#' fit <- mnlfa_ic(sim$responses, sim$person_data, ~ female,
-#'                 item_data = sim$item_data, item = ~ pos,
+#'   person_data = data.frame(el = rep(0:1, 150)), person = ~ el,
+#'   item_data = data.frame(domain = rep(c("number", "geometry", "data"), length.out = 9)),
+#'   item = ~ domain, slopes = rep(1.2, 9), intercepts = seq(-1, 1, length.out = 9),
+#'   impact = -0.3, seed = 1)
+#' fit <- mnlfa_ic(sim$responses, sim$person_data, ~ el,
+#'                 item_data = sim$item_data, item = ~ domain,
 #'                 control = mnlfa_control(M = 200, n_pilot = 100, seed = 1))
 #' fit
 #' summary(fit)

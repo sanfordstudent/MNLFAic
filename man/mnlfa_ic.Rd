@@ -68,7 +68,8 @@ everything else 0.}
 }
 \value{
 An object of class \code{mnlfa_ic}; see \code{\link[=summary.mnlfa_ic]{summary.mnlfa_ic()}},
-\code{\link[=dif_table]{dif_table()}}, \code{\link[=coef.mnlfa_ic]{coef.mnlfa_ic()}}, \code{\link[=diagnose]{diagnose()}}.
+\code{\link[=dif_table]{dif_table()}}, \code{\link[=coef.mnlfa_ic]{coef.mnlfa_ic()}}, \code{\link[=confint.mnlfa_ic]{confint.mnlfa_ic()}}, \code{\link[=diagnose]{diagnose()}} and
+\code{\link[=infer]{infer()}}.
 }
 \description{
 Fits a two-parameter logistic moderated nonlinear factor analysis in which
@@ -90,12 +91,12 @@ bootstrap that repeats Stage 2 on each draw.
 \examples{
 # Small example (a real analysis would use more persons, items and draws)
 sim <- simulate_mnlfa_ic(
-  person_data = data.frame(female = rep(0:1, 150)), person = ~ female,
-  item_data = data.frame(pos = rep(c("noun", "verb", "adj"), length.out = 9)),
-  item = ~ pos, slopes = rep(1.2, 9), intercepts = seq(-1, 1, length.out = 9),
-  impact = 0.3, seed = 1)
-fit <- mnlfa_ic(sim$responses, sim$person_data, ~ female,
-                item_data = sim$item_data, item = ~ pos,
+  person_data = data.frame(el = rep(0:1, 150)), person = ~ el,
+  item_data = data.frame(domain = rep(c("number", "geometry", "data"), length.out = 9)),
+  item = ~ domain, slopes = rep(1.2, 9), intercepts = seq(-1, 1, length.out = 9),
+  impact = -0.3, seed = 1)
+fit <- mnlfa_ic(sim$responses, sim$person_data, ~ el,
+                item_data = sim$item_data, item = ~ domain,
                 control = mnlfa_control(M = 200, n_pilot = 100, seed = 1))
 fit
 summary(fit)
