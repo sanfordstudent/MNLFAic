@@ -1,8 +1,8 @@
 #' Settings for mnlfa_ic()
 #'
-#' Collects the settings for estimation (Stage 1), the identification step
-#' (Stage 2) and the bootstrap inference (Stage 3). The defaults are those used
-#' in the paper.
+#' The settings for estimation (Stage 1), the identification step
+#' (Stage 2) and the bootstrap inference (Stage 3). The defaults are
+#' recommended for most analyses.
 #'
 #' @param form Parameterization of DIF: `"difficulty"` (default; DIF and
 #'   item-covariate effects are shifts in item difficulty in latent-SD units,
@@ -10,13 +10,18 @@
 #'   positive = easier). With item covariates the two define different models
 #'   (see Details).
 #' @param item_omit Named list giving, for categorical item covariates, the
-#'   level whose effect is implied (effect coding), e.g. `list(pos = "noun")`.
-#'   Default: the first level.
+#'   level whose effect is implied (effect coding), e.g.
+#'   `list(domain = "number")`. Default: the first level. The choice changes
+#'   only which category's effect is reported as implied; all category effects,
+#'   residual DIF and flags are the same.
 #' @param item_standardize Standardize continuous item covariates over items
 #'   (effects per SD of the item covariate). Default `TRUE`.
-#' @param anchor Stage-1 bookkeeping anchor: `"auto"` (default) or an item
-#'   number. Results do not depend on it; it only affects numerical stability.
-#' @param n_nodes Number of adaptive Gauss-Hermite quadrature nodes.
+#' @param anchor Item whose DIF is fixed at 0 for bookkeeping in Stage 1:
+#'   `"auto"` (default) or an item number. Results do not depend on it; it only
+#'   affects numerical stability.
+#' @param n_nodes Number of adaptive Gauss-Hermite quadrature nodes. This and
+#'   the Stage-1 numerical settings that follow (`em_tol` through
+#'   `fallback_em_iter`) rarely need to be changed.
 #' @param em_tol,em_stall EM tolerance and stall ratio before switching to
 #'   Newton steps.
 #' @param newton_tol Convergence criterion: every Newton step smaller than this
@@ -26,18 +31,30 @@
 #' @param M Number of bootstrap draws.
 #' @param n_pilot Number of draws used to estimate the standard errors that set
 #'   the threshold for threshold centering.
-#' @param center Centering of the bootstrap: `"threshold"` (default),
-#'   `"estimate"` or `"null"`.
+#' @param center Centering of the bootstrap: `"threshold"` (default; threshold
+#'   centering, recommended), `"estimate"` (centered at the point estimates, the
+#'   standard parametric bootstrap; conservative for item-covariate effects in
+#'   simulations) or `"null"` (residual DIF centered at 0; intervals for
+#'   item-covariate effects were too narrow in simulations).
 #' @param threshold Threshold rule for threshold centering, in standard errors:
-#'   `"sqrt2loglogN"` (default), `"sqrtlogN"`, `"bonferroni"`, or a number.
+#'   `"sqrt2loglogN"` (default; \eqn{\sqrt{2 \log \log N}}{sqrt(2 log log N)}),
+#'   `"sqrtlogN"` (\eqn{\sqrt{\log N}}{sqrt(log N)}), `"bonferroni"`
+#'   (\eqn{\sqrt{2 \log(JK)}}{sqrt(2 log(JK))}), or a number.
 #' @param level Confidence level of the intervals.
 #' @param fdr Benjamini-Hochberg false discovery rate for flagging residual DIF.
-#' @param ci_effects,ci_dif Interval shape for impact and item-covariate effects
-#'   (default symmetric) and for residual and total DIF (default equal-tailed).
+#' @param ci_effects,ci_dif Interval shape, `"symmetric"` or `"equal"`
+#'   (equal-tailed), for impact and item-covariate effects (default symmetric)
+#'   and for residual and total DIF (default equal-tailed). A symmetric interval
+#'   is the estimate plus or minus a quantile of the absolute bootstrap
+#'   deviations, so it is centered on the estimate; an equal-tailed interval
+#'   uses the lower and upper quantiles of the deviations separately (e.g.,
+#'   2.5% and 97.5%), so it can be asymmetric around the estimate.
 #' @param vcov Covariance used for the bootstrap draws: `"auto"` (cluster-robust
-#'   if a cluster was given, otherwise model-based) or `"model"`.
+#'   if a cluster was given, otherwise model-based) or `"model"`. Used only with
+#'   `cluster`, an experimental feature.
 #' @param cluster_t With a cluster-robust covariance, draw from a multivariate
-#'   t distribution with G - 1 degrees of freedom (default `TRUE`).
+#'   t distribution with G - 1 degrees of freedom (default `TRUE`). Used only
+#'   with `cluster`, an experimental feature.
 #' @param seed Optional seed for the bootstrap draws. The caller's random-number
 #'   stream is left unchanged. A seed reproduces results exactly on the same
 #'   machine; across platforms the multivariate normal draws can differ at the

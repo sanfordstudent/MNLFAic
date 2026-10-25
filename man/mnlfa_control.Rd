@@ -38,16 +38,21 @@ positive = easier). With item covariates the two define different models
 (see Details).}
 
 \item{item_omit}{Named list giving, for categorical item covariates, the
-level whose effect is implied (effect coding), e.g. \code{list(pos = "noun")}.
-Default: the first level.}
+level whose effect is implied (effect coding), e.g.
+\code{list(domain = "number")}. Default: the first level. The choice changes
+only which category's effect is reported as implied; all category effects,
+residual DIF and flags are the same.}
 
 \item{item_standardize}{Standardize continuous item covariates over items
 (effects per SD of the item covariate). Default \code{TRUE}.}
 
-\item{anchor}{Stage-1 bookkeeping anchor: \code{"auto"} (default) or an item
-number. Results do not depend on it; it only affects numerical stability.}
+\item{anchor}{Item whose DIF is fixed at 0 for bookkeeping in Stage 1:
+\code{"auto"} (default) or an item number. Results do not depend on it; it only
+affects numerical stability.}
 
-\item{n_nodes}{Number of adaptive Gauss-Hermite quadrature nodes.}
+\item{n_nodes}{Number of adaptive Gauss-Hermite quadrature nodes. This and
+the Stage-1 numerical settings that follow (\code{em_tol} through
+\code{fallback_em_iter}) rarely need to be changed.}
 
 \item{em_tol, em_stall}{EM tolerance and stall ratio before switching to
 Newton steps.}
@@ -63,24 +68,36 @@ and the EM fallback used when Newton fails.}
 \item{n_pilot}{Number of draws used to estimate the standard errors that set
 the threshold for threshold centering.}
 
-\item{center}{Centering of the bootstrap: \code{"threshold"} (default),
-\code{"estimate"} or \code{"null"}.}
+\item{center}{Centering of the bootstrap: \code{"threshold"} (default; threshold
+centering, recommended), \code{"estimate"} (centered at the point estimates, the
+standard parametric bootstrap; conservative for item-covariate effects in
+simulations) or \code{"null"} (residual DIF centered at 0; intervals for
+item-covariate effects were too narrow in simulations).}
 
 \item{threshold}{Threshold rule for threshold centering, in standard errors:
-\code{"sqrt2loglogN"} (default), \code{"sqrtlogN"}, \code{"bonferroni"}, or a number.}
+\code{"sqrt2loglogN"} (default; \eqn{\sqrt{2 \log \log N}}{sqrt(2 log log N)}),
+\code{"sqrtlogN"} (\eqn{\sqrt{\log N}}{sqrt(log N)}), \code{"bonferroni"}
+(\eqn{\sqrt{2 \log(JK)}}{sqrt(2 log(JK))}), or a number.}
 
 \item{level}{Confidence level of the intervals.}
 
 \item{fdr}{Benjamini-Hochberg false discovery rate for flagging residual DIF.}
 
-\item{ci_effects, ci_dif}{Interval shape for impact and item-covariate effects
-(default symmetric) and for residual and total DIF (default equal-tailed).}
+\item{ci_effects, ci_dif}{Interval shape, \code{"symmetric"} or \code{"equal"}
+(equal-tailed), for impact and item-covariate effects (default symmetric)
+and for residual and total DIF (default equal-tailed). A symmetric interval
+is the estimate plus or minus a quantile of the absolute bootstrap
+deviations, so it is centered on the estimate; an equal-tailed interval
+uses the lower and upper quantiles of the deviations separately (e.g.,
+2.5\% and 97.5\%), so it can be asymmetric around the estimate.}
 
 \item{vcov}{Covariance used for the bootstrap draws: \code{"auto"} (cluster-robust
-if a cluster was given, otherwise model-based) or \code{"model"}.}
+if a cluster was given, otherwise model-based) or \code{"model"}. Used only with
+\code{cluster}, an experimental feature.}
 
 \item{cluster_t}{With a cluster-robust covariance, draw from a multivariate
-t distribution with G - 1 degrees of freedom (default \code{TRUE}).}
+t distribution with G - 1 degrees of freedom (default \code{TRUE}). Used only
+with \code{cluster}, an experimental feature.}
 
 \item{seed}{Optional seed for the bootstrap draws. The caller's random-number
 stream is left unchanged. A seed reproduces results exactly on the same
@@ -93,9 +110,9 @@ level of bootstrap noise.}
 A list of class \code{mnlfa_control}.
 }
 \description{
-Collects the settings for estimation (Stage 1), the identification step
-(Stage 2) and the bootstrap inference (Stage 3). The defaults are those used
-in the paper.
+The settings for estimation (Stage 1), the identification step
+(Stage 2) and the bootstrap inference (Stage 3). The defaults are
+recommended for most analyses.
 }
 \details{
 With item covariates, the difficulty and slope-intercept forms are
