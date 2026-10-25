@@ -84,7 +84,7 @@
          "`responses` in the same order.", call. = FALSE)
   tt <- stats::terms(item, data = item_data)
   if (any(attr(tt, "order") > 1))
-    stop("Interactions in the `item` formula are not supported; build the product as a column of `item_data`.", call. = FALSE)
+    stop("Interactions in the `item` formula are not supported; create interaction terms manually as columns of `item_data`.", call. = FALSE)
   if (length(attr(tt, "term.labels")) == 0) return(NULL)
   mf <- stats::model.frame(tt, data = item_data, na.action = stats::na.pass)
   if (anyNA(mf)) stop("Item covariates contain missing values.", call. = FALSE)

@@ -4,40 +4,46 @@
 #' person covariates affect the latent mean (impact), the latent log-variance,
 #' and every item's difficulty (uniform DIF), and in which each item's DIF is
 #' decomposed into a part explained by item covariates and an item-specific
-#' residual. No anchor items are needed: the model is identified by assuming
-#' that residual DIF is sparse (the slope-weighted total residual DIF is
-#' minimal, separately for each person covariate), generalizing Chen et al.
-#' (2023). Inference uses a threshold-centered parametric bootstrap.
+#' residual. No pre-specified anchor items are needed: the model is identified
+#' by assuming that residual DIF is sparse (the slope-weighted total residual
+#' DIF is minimal, separately for each person covariate), generalizing Chen et
+#' al. (2023). Inference uses a threshold-centered parametric bootstrap.
 #'
 #' The analysis has three stages: (1) marginal maximum likelihood of the model
-#' with free DIF for every item and one bookkeeping anchor; (2) a weighted
-#' median regression that picks the representative satisfying the sparsity
-#' assumption; (3) a parametric bootstrap through Stage 2.
+#' with free DIF for every item and one item's DIF fixed at 0 for bookkeeping;
+#' (2) a weighted median regression that picks, among the solutions that fit
+#' equally well, the one satisfying the sparsity assumption; (3) a parametric
+#' bootstrap that repeats Stage 2 on each draw.
 #'
-#' @param responses N x J matrix or data frame of 0/1 responses (`NA` =
-#'   missing; missing responses are handled by full-information maximum
-#'   likelihood under MAR).
-#' @param person_data Data frame with one row per person, in the order of
-#'   `responses`.
-#' @param person One-sided formula of person covariates, e.g. `~ female + age`
-#'   or `~ treat * baseline`. Built without an intercept: numeric variables
-#'   enter as they are, factors as treatment (0/1) dummies with the first level
-#'   as reference. The person with all covariates at 0 is the reference
-#'   (latent mean 0, variance 1); center continuous covariates yourself if
-#'   needed. The sparsity assumption applies to each column separately, so the
-#'   coding of person covariates is part of the identifying assumption.
+#' @param responses N x J matrix or data frame of 0/1 responses. Missing
+#'   responses (`NA`) are allowed; estimation uses full-information maximum
+#'   likelihood.
+#' @param person_data Data frame with one row per person, in the order of the
+#'   rows of `responses`, with the person covariates as columns.
+#' @param person One-sided formula with no intercept consisting of person
+#'   covariates, e.g. `~ el + grade`. Factors are automatically converted to
+#'   0/1 dummies (first level as reference), and `a * b` adds the product of
+#'   two covariates. Continuous covariates are not rescaled automatically. The
+#'   person with every covariate at 0 is the reference (latent mean 0,
+#'   variance 1), so it may be advisable to rescale continuous person
+#'   covariates so that 0 has a meaningful value (e.g., centering or
+#'   standardizing). The sparsity assumption applies to each column
+#'   separately, so the coding of person covariates is part of the identifying
+#'   assumption.
 #' @param item_data Data frame with one row per item, in the order of the
 #'   columns of `responses`. If it has an `item` column (or row names), they
 #'   must match the column names of `responses`.
-#' @param item One-sided formula of item covariates, e.g. `~ aoa + pos`.
+#' @param item One-sided formula of item covariates, e.g. `~ reading + domain`.
 #'   Numeric variables are centered at their unweighted mean over items (and
 #'   standardized by default); factors and character variables are
-#'   effect-coded (see [mnlfa_control()]). `NULL` (default): no item
+#'   effect-coded (see [mnlfa_control()]). Interactions are not supported in
+#'   the formula; interaction terms should be created manually as columns of
+#'   `item_data`. `NULL` (default): no item
 #'   covariates; the analysis is then Chen et al.'s anchor-free method extended
 #'   to an arbitrary number of continuous or categorical person covariates.
 #' @param cluster Optional cluster identifier (vector with one value per
 #'   person, or the name of a column of `person_data`). Adds a cluster-robust
-#'   covariance for inference. Experimental.
+#'   covariance for inference. This is currently an experimental feature.
 #' @param control Settings from [mnlfa_control()].
 #' @param inference Run the bootstrap inference (Stage 3). If `FALSE`, only
 #'   point estimates are computed; use [infer()] later.
