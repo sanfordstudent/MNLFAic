@@ -4,41 +4,75 @@
 #' Stage functions for advanced use
 #'
 #' The three stages of [mnlfa_ic()] and the identification diagnostics, with
-#' matrix inputs. Useful for simulation studies and for re-using fits.
+#' matrix inputs. Useful for simulation studies and for reusing fits.
 #'
-#' * `mnlfa_fit()`: Stage 1, anchored marginal maximum likelihood with all DIF
-#'   free except one bookkeeping anchor. Returns the engine fit (slopes
-#'   `alpha.vec`, intercepts `beta.vec`, DIF `gamma.mat`, impact `beta`,
-#'   log-variance impact `eta`, information `info`, covariance `vcov`, ...).
-#' * `ml1_transform()`: Stage 2, the weighted median regression that chooses
-#'   the representative satisfying the sparsity assumption.
+#' * `mnlfa_fit()`: Stage 1, marginal maximum likelihood with every item's DIF
+#'   free except one item's DIF fixed at 0 for bookkeeping. Returns the fit,
+#'   including the information `info` and covariance `vcov`. The internal
+#'   names follow the scheme: `alpha.vec` = slopes, `beta.vec` = intercepts,
+#'   `gamma.mat` = DIF relative to the bookkeeping item, `beta` = impact on the
+#'   latent mean, `eta` = impact on the latent log-variance. These internal
+#'   names are subject to change in future versions. Item covariates play no
+#'   role in Stage 1, so `mnlfa_fit()` has no `W` argument.
+#' * `ml1_transform()`: Stage 2, the weighted median regression that chooses,
+#'   among the solutions that fit equally well, the one satisfying the
+#'   sparsity assumption.
 #' * `ml1_inference()`: Stage 3, the bootstrap.
 #' * `ml1_condition_check()`: the identification condition and its margin rho
 #'   for a given residual-DIF pattern.
 #' * `ml1_tolerance_table()`: how many same-signed residual-DIF items each
 #'   group of items can absorb.
 #'
-#' @param responses N x J matrix of 0/1/NA.
-#' @param x N x K numeric matrix of person covariates (no intercept).
-#' @param start Optional starting values (see [mnlfa_ic()]).
-#' @param cluster Optional cluster identifier.
-#' @param control Settings from [mnlfa_control()].
-#' @param fit A fit from `mnlfa_fit()`.
-#' @param dif J x K matrix of anchored DIF estimates (logits).
+#' @param responses For `mnlfa_fit()`: N x J matrix or data frame of 0/1/NA.
+#' @param x For `mnlfa_fit()`: N x K numeric matrix of person covariates (no
+#'   intercept).
+#' @param start For `mnlfa_fit()`: optional starting values (see
+#'   [mnlfa_ic()]).
+#' @param cluster For `mnlfa_fit()`: optional cluster identifier (currently an
+#'   experimental feature).
+#' @param control Settings from [mnlfa_control()]. For `ml1_inference()`, the
+#'   form is taken from `control` (`mnlfa_control(form = )`), not from a `form`
+#'   argument.
+#' @param fit For `ml1_inference()`: a fit from `mnlfa_fit()`.
+#' @param dif For `ml1_transform()`: J x K matrix of DIF estimates relative to
+#'   the bookkeeping item, on the logit scale (e.g. `fit$gamma.mat`).
 #' @param slopes Item slopes (length J).
-#' @param impact Optional anchored impact (length K).
+#' @param impact For `ml1_transform()`: optional impact on the latent mean
+#'   relative to the bookkeeping item (length K; e.g. `fit$beta`).
 #' @param W `NULL`, a J x M item-covariate matrix, or a list of such matrices
-#'   (one per person covariate).
-#' @param design Optional item design (as stored in an `mnlfa_ic` fit,
-#'   `fit$coding$design`) for implied category effects and joint tests.
+#'   (one per person covariate), which lets each person covariate have its own
+#'   item covariates.
+#' @param design For `ml1_inference()`: optional item design (as stored in an
+#'   `mnlfa_ic` fit, `fit$coding$design`) for implied category effects and
+#'   joint tests.
 #' @param form `"difficulty"` or `"slope-intercept"`.
-#' @param support Items with residual DIF (logical vector or indices).
-#' @param signs Signs (+1/-1) of their residual DIF.
-#' @param margin Also compute the margin rho.
-#' @param groups Named list of item-index vectors.
-#' @param sign Sign of the added residual DIF (+1 or -1).
-#' @param n_random,seed Random orders for the tolerance table.
-#' @return See Details.
+#' @param support For `ml1_condition_check()`: items with residual DIF
+#'   (logical vector or indices).
+#' @param signs For `ml1_condition_check()`: signs (+1/-1) of their residual
+#'   DIF.
+#' @param margin For `ml1_condition_check()`: also compute the margin rho.
+#' @param groups For `ml1_tolerance_table()`: named list of item-index vectors.
+#' @param sign For `ml1_tolerance_table()`: sign of the added residual DIF (+1
+#'   or -1).
+#' @param n_random,seed For `ml1_tolerance_table()`: number of random orders,
+#'   and their seed.
+#' @return
+#' * `mnlfa_fit()`: the Stage-1 fit, a list described above.
+#' * `ml1_transform()`: a list with `alpha` (impact on the latent mean),
+#'   `gamma` (item-covariate effects, one vector per person covariate), `eps`
+#'   (residual DIF), `nu_total` (total DIF), `delta` (the amount added to
+#'   impact, and to every item's difficulty DIF, to move from the bookkeeping
+#'   solution to the identified one), `nonunique` (per person covariate,
+#'   whether the weighted median regression had more than one solution) and
+#'   `metric` (the internal name of the form: `"difficulty"`, or `"logit"` for
+#'   `form = "slope-intercept"`). `gamma`, `eps` and `nu_total` are in the
+#'   units of `form` (difficulty units by default), although `dif` is on the
+#'   logit scale.
+#' * `ml1_inference()`: the inference tables that an `mnlfa_ic` fit stores in
+#'   `fit$inference` (`impact`, `category_effects`, `residual`, `total`,
+#'   `joint`, ...).
+#' * `ml1_condition_check()`: a list with `holds`, `rho` and `reason`.
+#' * `ml1_tolerance_table()`: a data frame, as in [diagnose()].
 #' @name stage-functions
 NULL
 

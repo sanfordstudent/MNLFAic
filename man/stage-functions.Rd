@@ -47,59 +47,94 @@ ml1_tolerance_table(
 )
 }
 \arguments{
-\item{responses}{N x J matrix of 0/1/NA.}
+\item{responses}{For \code{mnlfa_fit()}: N x J matrix or data frame of 0/1/NA.}
 
-\item{x}{N x K numeric matrix of person covariates (no intercept).}
+\item{x}{For \code{mnlfa_fit()}: N x K numeric matrix of person covariates (no
+intercept).}
 
-\item{start}{Optional starting values (see \code{\link[=mnlfa_ic]{mnlfa_ic()}}).}
+\item{start}{For \code{mnlfa_fit()}: optional starting values (see
+\code{\link[=mnlfa_ic]{mnlfa_ic()}}).}
 
-\item{cluster}{Optional cluster identifier.}
+\item{cluster}{For \code{mnlfa_fit()}: optional cluster identifier (currently an
+experimental feature).}
 
-\item{control}{Settings from \code{\link[=mnlfa_control]{mnlfa_control()}}.}
+\item{control}{Settings from \code{\link[=mnlfa_control]{mnlfa_control()}}. For \code{ml1_inference()}, the
+form is taken from \code{control} (\code{mnlfa_control(form = )}), not from a \code{form}
+argument.}
 
-\item{dif}{J x K matrix of anchored DIF estimates (logits).}
+\item{dif}{For \code{ml1_transform()}: J x K matrix of DIF estimates relative to
+the bookkeeping item, on the logit scale (e.g. \code{fit$gamma.mat}).}
 
 \item{slopes}{Item slopes (length J).}
 
-\item{impact}{Optional anchored impact (length K).}
+\item{impact}{For \code{ml1_transform()}: optional impact on the latent mean
+relative to the bookkeeping item (length K; e.g. \code{fit$beta}).}
 
 \item{W}{\code{NULL}, a J x M item-covariate matrix, or a list of such matrices
-(one per person covariate).}
+(one per person covariate), which lets each person covariate have its own
+item covariates.}
 
 \item{form}{\code{"difficulty"} or \code{"slope-intercept"}.}
 
-\item{fit}{A fit from \code{mnlfa_fit()}.}
+\item{fit}{For \code{ml1_inference()}: a fit from \code{mnlfa_fit()}.}
 
-\item{design}{Optional item design (as stored in an \code{mnlfa_ic} fit,
-\code{fit$coding$design}) for implied category effects and joint tests.}
+\item{design}{For \code{ml1_inference()}: optional item design (as stored in an
+\code{mnlfa_ic} fit, \code{fit$coding$design}) for implied category effects and
+joint tests.}
 
-\item{support}{Items with residual DIF (logical vector or indices).}
+\item{support}{For \code{ml1_condition_check()}: items with residual DIF
+(logical vector or indices).}
 
-\item{signs}{Signs (+1/-1) of their residual DIF.}
+\item{signs}{For \code{ml1_condition_check()}: signs (+1/-1) of their residual
+DIF.}
 
-\item{margin}{Also compute the margin rho.}
+\item{margin}{For \code{ml1_condition_check()}: also compute the margin rho.}
 
-\item{groups}{Named list of item-index vectors.}
+\item{groups}{For \code{ml1_tolerance_table()}: named list of item-index vectors.}
 
-\item{sign}{Sign of the added residual DIF (+1 or -1).}
+\item{sign}{For \code{ml1_tolerance_table()}: sign of the added residual DIF (+1
+or -1).}
 
-\item{n_random, seed}{Random orders for the tolerance table.}
+\item{n_random, seed}{For \code{ml1_tolerance_table()}: number of random orders,
+and their seed.}
 }
 \value{
-See Details.
+\itemize{
+\item \code{mnlfa_fit()}: the Stage-1 fit, a list described above.
+\item \code{ml1_transform()}: a list with \code{alpha} (impact on the latent mean),
+\code{gamma} (item-covariate effects, one vector per person covariate), \code{eps}
+(residual DIF), \code{nu_total} (total DIF), \code{delta} (the amount added to
+impact, and to every item's difficulty DIF, to move from the bookkeeping
+solution to the identified one), \code{nonunique} (per person covariate,
+whether the weighted median regression had more than one solution) and
+\code{metric} (the internal name of the form: \code{"difficulty"}, or \code{"logit"} for
+\code{form = "slope-intercept"}). \code{gamma}, \code{eps} and \code{nu_total} are in the
+units of \code{form} (difficulty units by default), although \code{dif} is on the
+logit scale.
+\item \code{ml1_inference()}: the inference tables that an \code{mnlfa_ic} fit stores in
+\code{fit$inference} (\code{impact}, \code{category_effects}, \code{residual}, \code{total},
+\code{joint}, ...).
+\item \code{ml1_condition_check()}: a list with \code{holds}, \code{rho} and \code{reason}.
+\item \code{ml1_tolerance_table()}: a data frame, as in \code{\link[=diagnose]{diagnose()}}.
+}
 }
 \description{
 The three stages of \code{\link[=mnlfa_ic]{mnlfa_ic()}} and the identification diagnostics, with
-matrix inputs. Useful for simulation studies and for re-using fits.
+matrix inputs. Useful for simulation studies and for reusing fits.
 }
 \details{
 \itemize{
-\item \code{mnlfa_fit()}: Stage 1, anchored marginal maximum likelihood with all DIF
-free except one bookkeeping anchor. Returns the engine fit (slopes
-\code{alpha.vec}, intercepts \code{beta.vec}, DIF \code{gamma.mat}, impact \code{beta},
-log-variance impact \code{eta}, information \code{info}, covariance \code{vcov}, ...).
-\item \code{ml1_transform()}: Stage 2, the weighted median regression that chooses
-the representative satisfying the sparsity assumption.
+\item \code{mnlfa_fit()}: Stage 1, marginal maximum likelihood with every item's DIF
+free except one item's DIF fixed at 0 for bookkeeping. Returns the fit,
+including the information \code{info} and covariance \code{vcov}. The internal
+names follow the scheme: \code{alpha.vec} = slopes, \code{beta.vec} = intercepts,
+\code{gamma.mat} = DIF relative to the bookkeeping item, \code{beta} = impact on the
+latent mean, \code{eta} = impact on the latent log-variance. These internal
+names are subject to change in future versions. Item covariates play no
+role in Stage 1, so \code{mnlfa_fit()} has no \code{W} argument.
+\item \code{ml1_transform()}: Stage 2, the weighted median regression that chooses,
+among the solutions that fit equally well, the one satisfying the
+sparsity assumption.
 \item \code{ml1_inference()}: Stage 3, the bootstrap.
 \item \code{ml1_condition_check()}: the identification condition and its margin rho
 for a given residual-DIF pattern.
