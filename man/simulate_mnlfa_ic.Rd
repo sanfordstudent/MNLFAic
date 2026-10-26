@@ -2,7 +2,7 @@
 % Please edit documentation in R/simulate_user.R
 \name{simulate_mnlfa_ic}
 \alias{simulate_mnlfa_ic}
-\title{Simulate data from an MNLFA with item covariates}
+\title{Simulate data from an MNLFA-IC model}
 \usage{
 simulate_mnlfa_ic(
   person_data,
@@ -36,15 +36,21 @@ simulate_mnlfa_ic(
 \item{slopes, intercepts}{Baseline item slopes and intercepts (length J; the
 item parameters of the person with all covariates at 0).}
 
-\item{impact}{Effects of the person covariates on the latent mean (length K,
-in the order of the columns built from \code{person}).}
+\item{impact}{Impact on the latent mean (length K, in the order of the
+columns built from \code{person}).}
 
-\item{variance_impact}{Effects on the latent log-variance (length K;
+\item{variance_impact}{Impact on the latent log-variance (length K;
 default 0).}
 
 \item{effects}{Item-covariate effects on DIF: a matrix with one row per
-item-covariate column and one column per person covariate (default 0).
-In the difficulty form these are latent-SD shifts, + = harder.}
+coded item-covariate column and one column per person covariate (default
+0). In the difficulty form these are latent-SD shifts, + = harder. Rows
+follow the coded item-covariate columns: the item covariates in formula
+order, each categorical one expanded to one column per level except the
+omitted one (e.g. \code{reading}, \code{domain_data}, \code{domain_geometry}). If
+\code{effects} has row (or column) names, they must match the coded
+item-covariate columns (or the person covariates) and are used to order
+the rows (or columns).}
 
 \item{residual_dif}{J x K matrix of item-specific DIF (default 0), in the
 same units.}
@@ -53,7 +59,9 @@ same units.}
 
 \item{cluster, icc}{Optional clustering of persons: with \code{icc > 0}, a share
 \code{icc} of the latent residual variance is shared within clusters, keeping
-each person's marginal distribution unchanged.}
+each person's marginal distribution unchanged. For use with the
+cluster-robust option of \code{\link[=mnlfa_ic]{mnlfa_ic()}}, which is currently an experimental
+feature.}
 
 \item{item_omit, item_standardize}{Coding of item covariates, as in
 \code{\link[=mnlfa_control]{mnlfa_control()}}.}
@@ -62,8 +70,13 @@ each person's marginal distribution unchanged.}
 unchanged.}
 }
 \value{
-A list with \code{responses} (N x J matrix), \code{theta}, \code{person_data},
-\code{item_data}, the coded person matrix \code{x} and item matrix \code{W}, and \code{truth}.
+A list with \code{responses} (N x J matrix), \code{theta} (the persons'
+latent trait values), \code{person_data}, \code{item_data}, the coded person matrix
+\code{x} and item matrix \code{W}, and \code{truth}: the generating values, with
+\code{lambda} (slopes), \code{nu0} (intercepts), \code{alpha} (impact on the mean),
+\code{omega} (impact on the log-variance), \code{gamma} (item-covariate effects),
+\code{eps} (residual DIF), \code{nu} (the resulting DIF on the logit scale, items in
+rows and person covariates in columns), \code{W}, \code{metric} and \code{form}.
 }
 \description{
 Generates 0/1 responses from the model used by \code{\link[=mnlfa_ic]{mnlfa_ic()}}, with person

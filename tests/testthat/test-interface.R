@@ -183,6 +183,19 @@ test_that("simulate_mnlfa_ic() checks its inputs", {
                                  effects = matrix(0, 2, 1)), "matrix")
   s <- simulate_mnlfa_ic(pd, ~ g, slopes = rep(1, 5), intercepts = rep(0, 5), impact = 0.5, seed = 1)
   expect_equal(dim(s$responses), c(100, 5))
+  # named rows and columns of `effects` are matched to the coded columns
+  pd2 <- data.frame(g = rep(0:1, 50), h = rep(c(0, 0, 1, 1), 25))
+  it3 <- data.frame(r = c(1, 4, 2, 5, 3, 6), pos = rep(c("a", "b", "c"), 2))
+  sim_eff <- function(e) simulate_mnlfa_ic(pd2, ~ g + h, it3, ~ r + pos, slopes = rep(1, 6), intercepts = rep(0, 6),
+                                           impact = c(0, 0), effects = e, seed = 3)
+  e <- matrix(c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6), 3, 2, dimnames = list(c("r", "pos_b", "pos_c"), c("g", "h")))
+  ref <- sim_eff(unname(e))
+  expect_identical(sim_eff(e[c(3, 1, 2), 2:1])$responses, ref$responses)
+  expect_identical(unname(sim_eff(e)$truth$gamma), ref$truth$gamma)
+  e_bad <- e; rownames(e_bad)[1] <- "reading"
+  expect_error(sim_eff(e_bad), "row names of `effects`")
+  e_bad <- e; colnames(e_bad)[1] <- "female"
+  expect_error(sim_eff(e_bad), "column names of `effects`")
 })
 
 test_that("cluster argument as a column name", {

@@ -1,4 +1,4 @@
-#' Simulate data from an MNLFA with item covariates
+#' Simulate data from an MNLFA-IC model
 #'
 #' Generates 0/1 responses from the model used by [mnlfa_ic()], with person
 #' and item covariates coded by the same rules.
@@ -10,25 +10,38 @@
 #' @param item One-sided formula of item covariates, or `NULL`.
 #' @param slopes,intercepts Baseline item slopes and intercepts (length J; the
 #'   item parameters of the person with all covariates at 0).
-#' @param impact Effects of the person covariates on the latent mean (length K,
-#'   in the order of the columns built from `person`).
-#' @param variance_impact Effects on the latent log-variance (length K;
+#' @param impact Impact on the latent mean (length K, in the order of the
+#'   columns built from `person`).
+#' @param variance_impact Impact on the latent log-variance (length K;
 #'   default 0).
 #' @param effects Item-covariate effects on DIF: a matrix with one row per
-#'   item-covariate column and one column per person covariate (default 0).
-#'   In the difficulty form these are latent-SD shifts, + = harder.
+#'   coded item-covariate column and one column per person covariate (default
+#'   0). In the difficulty form these are latent-SD shifts, + = harder. Rows
+#'   follow the coded item-covariate columns: the item covariates in formula
+#'   order, each categorical one expanded to one column per level except the
+#'   omitted one (e.g. `reading`, `domain_data`, `domain_geometry`). If
+#'   `effects` has row (or column) names, they must match the coded
+#'   item-covariate columns (or the person covariates) and are used to order
+#'   the rows (or columns).
 #' @param residual_dif J x K matrix of item-specific DIF (default 0), in the
 #'   same units.
 #' @param form `"difficulty"` (default) or `"slope-intercept"`.
 #' @param cluster,icc Optional clustering of persons: with `icc > 0`, a share
 #'   `icc` of the latent residual variance is shared within clusters, keeping
-#'   each person's marginal distribution unchanged.
+#'   each person's marginal distribution unchanged. For use with the
+#'   cluster-robust option of [mnlfa_ic()], which is currently an experimental
+#'   feature.
 #' @param item_omit,item_standardize Coding of item covariates, as in
 #'   [mnlfa_control()].
 #' @param seed Optional seed; the caller's random-number stream is left
 #'   unchanged.
-#' @return A list with `responses` (N x J matrix), `theta`, `person_data`,
-#'   `item_data`, the coded person matrix `x` and item matrix `W`, and `truth`.
+#' @return A list with `responses` (N x J matrix), `theta` (the persons'
+#'   latent trait values), `person_data`, `item_data`, the coded person matrix
+#'   `x` and item matrix `W`, and `truth`: the generating values, with
+#'   `lambda` (slopes), `nu0` (intercepts), `alpha` (impact on the mean),
+#'   `omega` (impact on the log-variance), `gamma` (item-covariate effects),
+#'   `eps` (residual DIF), `nu` (the resulting DIF on the logit scale, items in
+#'   rows and person covariates in columns), `W`, `metric` and `form`.
 #' @examples
 #' sim <- simulate_mnlfa_ic(person_data = data.frame(female = rep(0:1, 100)),
 #'                          person = ~ female, slopes = rep(1, 8),
@@ -60,6 +73,18 @@ simulate_mnlfa_ic <- function(person_data, person, item_data = NULL, item = NULL
   effects <- as.matrix(effects)
   if (M > 0 && !all(dim(effects) == c(M, K)))
     stop("`effects` must be a ", M, " x ", K, " matrix (item-covariate columns: ", paste(colnames(W), collapse = ", "), ").", call. = FALSE)
+  if (M > 0 && !is.null(rownames(effects))) {
+    if (anyDuplicated(rownames(effects)) || !setequal(rownames(effects), colnames(W)))
+      stop("The row names of `effects` must be the coded item-covariate columns: ", paste(colnames(W), collapse = ", "),
+           ".", call. = FALSE)
+    effects <- effects[colnames(W), , drop = FALSE]
+  }
+  if (M > 0 && !is.null(colnames(effects))) {
+    if (anyDuplicated(colnames(effects)) || !setequal(colnames(effects), colnames(x)))
+      stop("The column names of `effects` must be the person covariates: ", paste(colnames(x), collapse = ", "),
+           ".", call. = FALSE)
+    effects <- effects[, colnames(x), drop = FALSE]
+  }
   if (is.null(residual_dif)) residual_dif <- matrix(0, J, K)
   residual_dif <- as.matrix(residual_dif)
   if (!all(dim(residual_dif) == c(J, K))) stop("`residual_dif` must be a ", J, " x ", K, " matrix.", call. = FALSE)
