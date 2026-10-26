@@ -239,17 +239,23 @@ dif_table <- function(object, type = c("residual", "total"), flagged_only = FALS
 
 #' Identification diagnostics
 #'
-#' The plug-in identification margin rho per person covariate (rho < 1 is
+#' The estimated identification margin rho per person covariate (rho < 1 is
 #' required; computed from a set of flagged cells, their signs and the
 #' estimated slopes), a tolerance table (how many same-signed residual-DIF
 #' items each group of items could absorb), and a report on the Stage-2
 #' design.
 #'
-#' The plug-in rho tends to understate the true margin (undetected residual
-#' DIF lowers it), so use it as a one-sided warning: computed from a less
-#' conservative flag set (the default), a value above 0.4 suggests that
-#' intervals for item-covariate effects may be too narrow; a low value is not a
-#' guarantee.
+#' Note that rho is estimated, and tends to be too low when residual DIF goes
+#' undetected, so it is provided as an approximate diagnostic, not a formal
+#' test of identification. The default flag set (`"p05"`) is deliberately less
+#' conservative than the Benjamini-Hochberg flags, so that less residual DIF
+#' goes undetected. Simulations suggest that a value above about 0.4 may
+#' indicate weaker identification, which results in confidence intervals for
+#' item-covariate effects that are too narrow.
+#'
+#' These diagnostics check whether the estimated pattern of residual DIF
+#' satisfies the sparsity condition; the assumption itself concerns the true,
+#' unknown pattern and cannot be tested from the data.
 #'
 #' @param object An `mnlfa_ic` fit with inference.
 #' @param flags Flag set for rho: `"p05"` (unadjusted p < .05; default),
@@ -260,10 +266,19 @@ dif_table <- function(object, type = c("residual", "total"), flagged_only = FALS
 #'   highest 10% of each continuous one.
 #' @param tolerance Compute the tolerance table.
 #' @param n_random Number of random orders in the tolerance table.
-#' @return A list of class `mnlfa_ic_diagnostics` with `margin` (data frame),
-#'   `tolerance` (data frame or `NULL`), `design` (list: correlations of slopes
-#'   with item covariates, condition number, highest-leverage items) and
-#'   `flags`.
+#' @return A list of class `mnlfa_ic_diagnostics` with
+#'   * `margin`: a data frame with, per person covariate, the number of flagged
+#'     cells used (`n_flagged`), `rho`, and whether the condition holds
+#'     (`holds`);
+#'   * `tolerance` (or `NULL` without item covariates or with
+#'     `tolerance = FALSE`): a data frame with, per group of items, the number
+#'     of items (`n_items`) and the number of same-signed residual-DIF items
+#'     the group could absorb when they are added in order of decreasing slope
+#'     (`by_lambda`, typically the worst case) and over random orders (median
+#'     `random_median` and 5th percentile `random_p05`);
+#'   * `design`: a list with the correlations of the slopes with the item
+#'     covariates, the condition number and the highest-leverage items;
+#'   * `flags`: the flag set used.
 #' @export
 diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, tolerance = TRUE, n_random = 200) {
   flags <- match.arg(flags)
