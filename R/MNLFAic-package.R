@@ -1,7 +1,8 @@
 #' MNLFAic: anchor-free DIF inference in moderated nonlinear factor analysis with item covariates (MNLFA-IC)
 #'
-#' Estimation and inference for uniform (i.e., difficulty or intercept) differential item
-#' functioning with respect to an arbitrary number of continuous or
+#' Estimation and inference for uniform (i.e., difficulty, or optionally,
+#' intercept) differential item functioning with respect to an arbitrary
+#' number of continuous or
 #' categorical person covariates, in moderated nonlinear factor analysis with
 #' item covariates. Person covariates affect the mean and variance of the
 #' latent trait (impact) and each item's difficulty (DIF), and each item's DIF
