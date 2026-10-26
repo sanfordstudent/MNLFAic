@@ -4,18 +4,34 @@
 \name{MNLFAic-package}
 \alias{MNLFAic}
 \alias{MNLFAic-package}
-\title{MNLFAic: anchor-free DIF inference with item covariates in MNLFA}
+\title{MNLFAic: anchor-free DIF inference in moderated nonlinear factor analysis with item covariates (MNLFA-IC)}
 \description{
 Estimation and inference for uniform (difficulty) differential item
-functioning in moderated nonlinear factor analysis with item covariates,
-identified without anchor items by a sparsity assumption on item-specific
-residual DIF (a generalization of the minimal-L1 condition of Chen et al.,
-2023).
+functioning with respect to an arbitrary number of continuous or
+categorical person covariates, in moderated nonlinear factor analysis with
+item covariates. Person covariates affect the mean and variance of the
+latent trait (impact) and each item's difficulty (DIF), and each item's DIF
+is split into a part explained by item covariates and item-specific
+residual DIF. The model is identified without pre-specified anchor items by
+a sparsity assumption on residual DIF (a generalization of the minimal-L1
+condition of Chen et al., 2023).
 }
 \details{
-The main function is \code{\link[=mnlfa_ic]{mnlfa_ic()}}; see \code{\link[=summary.mnlfa_ic]{summary.mnlfa_ic()}}, \code{\link[=dif_table]{dif_table()}}
-and \code{\link[=diagnose]{diagnose()}} for its results. \code{vignette("MNLFAic")} works through an
-example, and \code{vignette("method")} describes the model and the procedure.
+The main function is \code{\link[=mnlfa_ic]{mnlfa_ic()}}. Its results:
+\itemize{
+\item \code{\link[=summary.mnlfa_ic]{summary.mnlfa_ic()}}, \code{\link[=dif_table]{dif_table()}} and \code{\link[=diagnose]{diagnose()}}: the main tables,
+item-level results and identification diagnostics;
+\item \code{\link[=coef.mnlfa_ic]{coef.mnlfa_ic()}} and \code{\link[=confint.mnlfa_ic]{confint.mnlfa_ic()}}: estimates and confidence
+intervals, one type of parameter at a time;
+\item \code{\link[=infer]{infer()}}: rerunning the bootstrap with other settings;
+\item \code{\link[=simulate_mnlfa_ic]{simulate_mnlfa_ic()}} and \code{\link[=simulate.mnlfa_ic]{simulate.mnlfa_ic()}}: simulating data from
+chosen values or from a fit;
+\item the \link[=stage-functions]{stage functions}: the three stages and the
+identification diagnostics for advanced use.
+}
+
+\code{vignette("MNLFAic")} works through an example, and \code{vignette("method")}
+describes the model and the procedure.
 
 The package is under development; the user-facing interface is not final.
 }

@@ -1,14 +1,28 @@
-#' MNLFAic: anchor-free DIF inference with item covariates in MNLFA
+#' MNLFAic: anchor-free DIF inference in moderated nonlinear factor analysis with item covariates (MNLFA-IC)
 #'
 #' Estimation and inference for uniform (difficulty) differential item
-#' functioning in moderated nonlinear factor analysis with item covariates,
-#' identified without anchor items by a sparsity assumption on item-specific
-#' residual DIF (a generalization of the minimal-L1 condition of Chen et al.,
-#' 2023).
+#' functioning with respect to an arbitrary number of continuous or
+#' categorical person covariates, in moderated nonlinear factor analysis with
+#' item covariates. Person covariates affect the mean and variance of the
+#' latent trait (impact) and each item's difficulty (DIF), and each item's DIF
+#' is split into a part explained by item covariates and item-specific
+#' residual DIF. The model is identified without pre-specified anchor items by
+#' a sparsity assumption on residual DIF (a generalization of the minimal-L1
+#' condition of Chen et al., 2023).
 #'
-#' The main function is [mnlfa_ic()]; see [summary.mnlfa_ic()], [dif_table()]
-#' and [diagnose()] for its results. `vignette("MNLFAic")` works through an
-#' example, and `vignette("method")` describes the model and the procedure.
+#' The main function is [mnlfa_ic()]. Its results:
+#' * [summary.mnlfa_ic()], [dif_table()] and [diagnose()]: the main tables,
+#'   item-level results and identification diagnostics;
+#' * [coef.mnlfa_ic()] and [confint.mnlfa_ic()]: estimates and confidence
+#'   intervals, one type of parameter at a time;
+#' * [infer()]: rerunning the bootstrap with other settings;
+#' * [simulate_mnlfa_ic()] and [simulate.mnlfa_ic()]: simulating data from
+#'   chosen values or from a fit;
+#' * the [stage functions][stage-functions]: the three stages and the
+#'   identification diagnostics for advanced use.
+#'
+#' `vignette("MNLFAic")` works through an example, and `vignette("method")`
+#' describes the model and the procedure.
 #'
 #' The package is under development; the user-facing interface is not final.
 #'
