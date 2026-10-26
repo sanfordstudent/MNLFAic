@@ -1,4 +1,4 @@
-# TODO before release: replace the package entry with the paper once it is published.
+# TODO before release: replace the package entry with the paper (the preprint is fine).
 bibentry(
   bibtype = "Manual",
   header = "To cite the package and the method with item covariates, use:",
@@ -12,7 +12,7 @@ bibentry(
 )
 bibentry(
   bibtype = "Article",
-  header = "The anchor-free method without item covariates is from:",
+  header = "The minimal-L1 identification condition that the method implemented in this package is based upon is from:",
   title = "{DIF} Statistical Inference Without Knowing Anchoring Items",
   author = c(person("Yunxiao", "Chen"), person("Chengcheng", "Li"), person("Jing", "Ouyang"), person("Gongjun", "Xu")),
   journal = "Psychometrika",
