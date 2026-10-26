@@ -6,23 +6,25 @@
 \usage{
 \method{coef}{mnlfa_ic}(
   object,
-  type = c("impact", "variance", "effects", "residual", "total", "slopes", "intercepts"),
+  type = c("mean", "variance", "effects", "residual", "total", "slopes", "intercepts"),
   ...
 )
 }
 \arguments{
 \item{object}{An \code{mnlfa_ic} fit.}
 
-\item{type}{Which coefficients: \code{"impact"} (latent mean), \code{"variance"}
-(latent log-variance), \code{"effects"} (item-covariate effects on DIF, with
-implied categories), \code{"residual"} or \code{"total"} (J x K matrices of residual
-and total DIF), \code{"slopes"} or \code{"intercepts"} (baseline item parameters).}
+\item{type}{Which coefficients: \code{"mean"} (default; impact on the latent
+mean), \code{"variance"} (impact on the latent log-variance), \code{"effects"}
+(item-covariate effects on DIF, with implied categories), \code{"residual"} or
+\code{"total"} (residual and total DIF, items in rows and person covariates in
+columns), \code{"slopes"} or \code{"intercepts"} (baseline item parameters, for the
+reference person with all covariates at 0).}
 
 \item{...}{Unused.}
 }
 \value{
-A named vector or a matrix.
+A named vector, or a matrix for \code{"residual"} and \code{"total"}.
 }
 \description{
-Coefficients of an mnlfa_ic fit
+Point estimates from an \code{mnlfa_ic} fit, one type of parameter at a time.
 }

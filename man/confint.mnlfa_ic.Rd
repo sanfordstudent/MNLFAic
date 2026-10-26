@@ -6,7 +6,7 @@
 \usage{
 \method{confint}{mnlfa_ic}(
   object,
-  parm = c("impact", "variance", "effects", "residual", "total"),
+  parm = c("mean", "variance", "effects", "residual", "total"),
   level = object$control$level,
   ...
 )
@@ -14,7 +14,7 @@
 \arguments{
 \item{object}{An \code{mnlfa_ic} fit with inference.}
 
-\item{parm}{Which quantities: \code{"impact"}, \code{"variance"}, \code{"effects"},
+\item{parm}{Which quantities: \code{"mean"}, \code{"variance"}, \code{"effects"},
 \code{"residual"} or \code{"total"}.}
 
 \item{level}{Confidence level. Must equal the level of the fitted inference,

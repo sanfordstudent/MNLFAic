@@ -220,7 +220,7 @@ with its own intervals and p-values instead.
 `coef()` and `confint()` return single tables.
 
 ```{r}
-coef(fit, "impact")
+coef(fit, "mean")
 coef(fit, "effects")
 confint(fit, "effects")
 ```

@@ -114,19 +114,23 @@ print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
 
 #' Coefficients of an mnlfa_ic fit
 #'
+#' Point estimates from an `mnlfa_ic` fit, one type of parameter at a time.
+#'
 #' @param object An `mnlfa_ic` fit.
-#' @param type Which coefficients: `"impact"` (latent mean), `"variance"`
-#'   (latent log-variance), `"effects"` (item-covariate effects on DIF, with
-#'   implied categories), `"residual"` or `"total"` (J x K matrices of residual
-#'   and total DIF), `"slopes"` or `"intercepts"` (baseline item parameters).
+#' @param type Which coefficients: `"mean"` (default; impact on the latent
+#'   mean), `"variance"` (impact on the latent log-variance), `"effects"`
+#'   (item-covariate effects on DIF, with implied categories), `"residual"` or
+#'   `"total"` (residual and total DIF, items in rows and person covariates in
+#'   columns), `"slopes"` or `"intercepts"` (baseline item parameters, for the
+#'   reference person with all covariates at 0).
 #' @param ... Unused.
-#' @return A named vector or a matrix.
+#' @return A named vector, or a matrix for `"residual"` and `"total"`.
 #' @export
-coef.mnlfa_ic <- function(object, type = c("impact", "variance", "effects", "residual", "total", "slopes", "intercepts"), ...) {
+coef.mnlfa_ic <- function(object, type = c("mean", "variance", "effects", "residual", "total", "slopes", "intercepts"), ...) {
   type <- match.arg(type)
   s2 <- object$stage2; f <- object$stage1
   switch(type,
-    impact = s2$alpha,
+    mean = s2$alpha,
     variance = f$eta,
     effects = {
       des <- object$coding$design
@@ -144,7 +148,7 @@ coef.mnlfa_ic <- function(object, type = c("impact", "variance", "effects", "res
 #' Confidence intervals for an mnlfa_ic fit
 #'
 #' @param object An `mnlfa_ic` fit with inference.
-#' @param parm Which quantities: `"impact"`, `"variance"`, `"effects"`,
+#' @param parm Which quantities: `"mean"`, `"variance"`, `"effects"`,
 #'   `"residual"` or `"total"`.
 #' @param level Confidence level. Must equal the level of the fitted inference,
 #'   except for `"variance"` (Wald intervals at any level); use [infer()] to
@@ -152,7 +156,7 @@ coef.mnlfa_ic <- function(object, type = c("impact", "variance", "effects", "res
 #' @param ... Unused.
 #' @return A data frame with estimates and interval limits.
 #' @export
-confint.mnlfa_ic <- function(object, parm = c("impact", "variance", "effects", "residual", "total"),
+confint.mnlfa_ic <- function(object, parm = c("mean", "variance", "effects", "residual", "total"),
                              level = object$control$level, ...) {
   parm <- match.arg(parm)
   if (parm == "variance") return(.variance_table(object, level)[, c("covariate", "est", "ci_low", "ci_high")])
@@ -161,7 +165,7 @@ confint.mnlfa_ic <- function(object, parm = c("impact", "variance", "effects", "
     stop("The inference was run at level ", object$control$level, "; use infer(object, level = ", level, ").", call. = FALSE)
   inf <- object$inference
   out <- switch(parm,
-    impact = inf$impact[, c("covariate", "est", "ci_low", "ci_high")],
+    mean = inf$impact[, c("covariate", "est", "ci_low", "ci_high")],
     effects = if (!is.null(inf$category_effects)) inf$category_effects[, c("covariate", "term", "est", "ci_low", "ci_high")] else
               if (!is.null(inf$gamma)) inf$gamma[, c("term", "est", "ci_low", "ci_high")] else NULL,
     residual = dif_table(object)[, c("item", "covariate", "est", "ci_low", "ci_high")],
