@@ -117,7 +117,7 @@ print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
 #' Point estimates from an `mnlfa_ic` fit, one type of parameter at a time.
 #'
 #' @param object An `mnlfa_ic` fit.
-#' @param type Which coefficients: `"mean"` (default; impact on the latent
+#' @param type `"mean"` (default; impact on the latent
 #'   mean), `"variance"` (impact on the latent log-variance), `"effects"`
 #'   (item-covariate effects on DIF, with implied categories), `"residual"` or
 #'   `"total"` (residual and total DIF, items in rows and person covariates in
@@ -147,14 +147,25 @@ coef.mnlfa_ic <- function(object, type = c("mean", "variance", "effects", "resid
 
 #' Confidence intervals for an mnlfa_ic fit
 #'
+#' Confidence intervals from an `mnlfa_ic` fit, one type of parameter at a
+#' time.
+#'
 #' @param object An `mnlfa_ic` fit with inference.
-#' @param parm Which quantities: `"mean"`, `"variance"`, `"effects"`,
-#'   `"residual"` or `"total"`.
-#' @param level Confidence level. Must equal the level of the fitted inference,
-#'   except for `"variance"` (Wald intervals at any level); use [infer()] to
-#'   change it.
+#' @param parm `"mean"` (default; impact on the latent mean),
+#'   `"variance"` (impact on the latent log-variance), `"effects"`
+#'   (item-covariate effects on DIF, with implied categories), `"residual"` or
+#'   `"total"` (residual and total DIF, one row per item and person
+#'   covariate).
+#' @param level Confidence level. The bootstrap intervals are computed when the
+#'   model is fitted, at the level set by `mnlfa_control(level = )` (default
+#'   0.95), so `level` must equal that value. For intervals at a different
+#'   level, rerun the bootstrap with `infer(object, level = )`, which reuses the
+#'   Stage-1 fit. The Wald intervals for `"variance"` can be computed at any
+#'   level. As a result, `level` can only be changed here for `"variance"`.
 #' @param ... Unused.
-#' @return A data frame with estimates and interval limits.
+#' @return A data frame with the covariate (and the term or item, where
+#'   relevant), the estimate `est`, and the confidence limits `ci_low` and
+#'   `ci_high`.
 #' @export
 confint.mnlfa_ic <- function(object, parm = c("mean", "variance", "effects", "residual", "total"),
                              level = object$control$level, ...) {

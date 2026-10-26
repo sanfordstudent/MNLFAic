@@ -14,18 +14,27 @@
 \arguments{
 \item{object}{An \code{mnlfa_ic} fit with inference.}
 
-\item{parm}{Which quantities: \code{"mean"}, \code{"variance"}, \code{"effects"},
-\code{"residual"} or \code{"total"}.}
+\item{parm}{\code{"mean"} (default; impact on the latent mean),
+\code{"variance"} (impact on the latent log-variance), \code{"effects"}
+(item-covariate effects on DIF, with implied categories), \code{"residual"} or
+\code{"total"} (residual and total DIF, one row per item and person
+covariate).}
 
-\item{level}{Confidence level. Must equal the level of the fitted inference,
-except for \code{"variance"} (Wald intervals at any level); use \code{\link[=infer]{infer()}} to
-change it.}
+\item{level}{Confidence level. The bootstrap intervals are computed when the
+model is fitted, at the level set by \code{mnlfa_control(level = )} (default
+0.95), so \code{level} must equal that value. For intervals at a different
+level, rerun the bootstrap with \code{infer(object, level = )}, which reuses the
+Stage-1 fit. The Wald intervals for \code{"variance"} can be computed at any
+level. As a result, \code{level} can only be changed here for \code{"variance"}.}
 
 \item{...}{Unused.}
 }
 \value{
-A data frame with estimates and interval limits.
+A data frame with the covariate (and the term or item, where
+relevant), the estimate \code{est}, and the confidence limits \code{ci_low} and
+\code{ci_high}.
 }
 \description{
-Confidence intervals for an mnlfa_ic fit
+Confidence intervals from an \code{mnlfa_ic} fit, one type of parameter at a
+time.
 }

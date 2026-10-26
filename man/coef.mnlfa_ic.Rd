@@ -13,7 +13,7 @@
 \arguments{
 \item{object}{An \code{mnlfa_ic} fit.}
 
-\item{type}{Which coefficients: \code{"mean"} (default; impact on the latent
+\item{type}{\code{"mean"} (default; impact on the latent
 mean), \code{"variance"} (impact on the latent log-variance), \code{"effects"}
 (item-covariate effects on DIF, with implied categories), \code{"residual"} or
 \code{"total"} (residual and total DIF, items in rows and person covariates in
