@@ -10,17 +10,27 @@ dif_table(object, type = c("residual", "total"), flagged_only = FALSE)
 \item{object}{An \code{mnlfa_ic} fit with inference.}
 
 \item{type}{\code{"residual"} (default) or \code{"total"} DIF for the estimates,
-intervals and p-values.}
+confidence intervals and p-values. The \code{flag} column always refers to
+residual DIF.}
 
 \item{flagged_only}{Only rows flagged by Benjamini-Hochberg (residual DIF).}
 }
 \value{
-A data frame with columns \code{item}, \code{covariate}, \code{est}, \code{se},
-\code{ci_low}, \code{ci_high}, \code{p}, \code{p_bh} (residual only), \code{flag}, \code{total},
-\code{explained}, \code{residual}, and the item covariates of each item.
+A data frame with one row per item and person covariate and columns:
+\itemize{
+\item \code{item}, \code{covariate}: the item and the person covariate;
+\item \code{est}, \code{se}, \code{ci_low}, \code{ci_high}, \code{p}: estimate, bootstrap standard
+error, confidence interval and p-value of the DIF chosen by \code{type};
+\item \code{p_bh} (residual DIF only): Benjamini-Hochberg-adjusted p-value;
+\item \code{flag}: residual DIF flagged at the false discovery rate set in
+\code{\link[=mnlfa_control]{mnlfa_control()}};
+\item \code{total}, \code{explained}, \code{residual}: point estimates of total DIF and its
+two parts (total = explained + residual);
+\item the item covariates of each item (if any).
+}
 }
 \description{
 One row per item and person covariate, with residual (item-specific) DIF or
-total DIF, its interval and tests, and the part explained by the item
-covariates.
+total DIF, its confidence interval and tests, and the part explained by the
+item covariates.
 }

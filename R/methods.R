@@ -185,16 +185,24 @@ vcov.mnlfa_ic <- function(object, ...) {
 #' Item-level DIF table
 #'
 #' One row per item and person covariate, with residual (item-specific) DIF or
-#' total DIF, its interval and tests, and the part explained by the item
-#' covariates.
+#' total DIF, its confidence interval and tests, and the part explained by the
+#' item covariates.
 #'
 #' @param object An `mnlfa_ic` fit with inference.
 #' @param type `"residual"` (default) or `"total"` DIF for the estimates,
-#'   intervals and p-values.
+#'   confidence intervals and p-values. The `flag` column always refers to
+#'   residual DIF.
 #' @param flagged_only Only rows flagged by Benjamini-Hochberg (residual DIF).
-#' @return A data frame with columns `item`, `covariate`, `est`, `se`,
-#'   `ci_low`, `ci_high`, `p`, `p_bh` (residual only), `flag`, `total`,
-#'   `explained`, `residual`, and the item covariates of each item.
+#' @return A data frame with one row per item and person covariate and columns:
+#'   * `item`, `covariate`: the item and the person covariate;
+#'   * `est`, `se`, `ci_low`, `ci_high`, `p`: estimate, bootstrap standard
+#'     error, confidence interval and p-value of the DIF chosen by `type`;
+#'   * `p_bh` (residual DIF only): Benjamini-Hochberg-adjusted p-value;
+#'   * `flag`: residual DIF flagged at the false discovery rate set in
+#'     [mnlfa_control()];
+#'   * `total`, `explained`, `residual`: point estimates of total DIF and its
+#'     two parts (total = explained + residual);
+#'   * the item covariates of each item (if any).
 #' @export
 dif_table <- function(object, type = c("residual", "total"), flagged_only = FALSE) {
   type <- match.arg(type)
