@@ -2,7 +2,7 @@
 % Please edit documentation in R/mnlfa_ic.R
 \name{infer}
 \alias{infer}
-\title{Re-run the inference without refitting}
+\title{Rerun the bootstrap inference without refitting}
 \usage{
 infer(object, ...)
 }
@@ -10,15 +10,20 @@ infer(object, ...)
 \item{object}{An \code{mnlfa_ic} fit.}
 
 \item{...}{Arguments of \code{\link[=mnlfa_control]{mnlfa_control()}} to change, e.g. \code{M = 5000},
-\code{center = "estimate"}, \code{seed = 2}. Stage-1 settings and item-covariate
-coding cannot be changed here.}
+\code{center = "estimate"}, \code{seed = 2}. \code{item_omit}, \code{item_standardize},
+\code{anchor} and the Stage-1 numerical settings (\code{n_nodes} through
+\code{fallback_em_iter}) cannot be changed here; they need a new call to
+\code{\link[=mnlfa_ic]{mnlfa_ic()}}.}
 }
 \value{
 The updated \code{mnlfa_ic} object.
 }
 \description{
 Runs Stage 3 (and Stage 2, if the parameterization changes) again with some
-settings changed, reusing the Stage-1 fit.
+settings changed, reusing the Stage-1 fit. Use it to run the inference after
+\code{mnlfa_ic(..., inference = FALSE)}, or to change the number of draws, the
+confidence level, the centering or the seed without repeating the Stage-1
+fit.
 }
 \examples{
 \donttest{

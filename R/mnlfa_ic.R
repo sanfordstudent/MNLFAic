@@ -127,15 +127,20 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
   object
 }
 
-#' Re-run the inference without refitting
+#' Rerun the bootstrap inference without refitting
 #'
 #' Runs Stage 3 (and Stage 2, if the parameterization changes) again with some
-#' settings changed, reusing the Stage-1 fit.
+#' settings changed, reusing the Stage-1 fit. Use it to run the inference after
+#' `mnlfa_ic(..., inference = FALSE)`, or to change the number of draws, the
+#' confidence level, the centering or the seed without repeating the Stage-1
+#' fit.
 #'
 #' @param object An `mnlfa_ic` fit.
 #' @param ... Arguments of [mnlfa_control()] to change, e.g. `M = 5000`,
-#'   `center = "estimate"`, `seed = 2`. Stage-1 settings and item-covariate
-#'   coding cannot be changed here.
+#'   `center = "estimate"`, `seed = 2`. `item_omit`, `item_standardize`,
+#'   `anchor` and the Stage-1 numerical settings (`n_nodes` through
+#'   `fallback_em_iter`) cannot be changed here; they need a new call to
+#'   [mnlfa_ic()].
 #' @return The updated `mnlfa_ic` object.
 #' @examples
 #' \donttest{
