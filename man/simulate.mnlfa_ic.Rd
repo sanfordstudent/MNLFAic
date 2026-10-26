@@ -28,12 +28,17 @@ the estimates for cells flagged by Benjamini-Hochberg, 0 elsewhere),
 }
 \value{
 A list of \code{nsim} response matrices, with the simulated truth as
-attribute \code{"truth"}.
+attribute \code{"truth"}: a list with \code{slopes}, \code{intercepts}, \code{impact} (on the
+latent mean), \code{variance_impact} (on the latent log-variance), \code{effects}
+(item-covariate effects, or \code{NULL}), \code{residual_dif} and \code{form}, named as
+the arguments of \code{\link[=simulate_mnlfa_ic]{simulate_mnlfa_ic()}}.
 }
 \description{
 Generates response data from the fitted model: the estimated slopes,
-intercepts, impact, variance impact and item-covariate effects, with
-residual DIF set as chosen. The persons' covariates and the pattern of
-missing responses are those of the data. Persons are simulated as
-independent (no clustering).
+intercepts, impact on the latent mean and log-variance, and item-covariate
+effects, with residual DIF set as chosen. The persons' covariates and the
+pattern of missing responses are those of the data. Persons are simulated
+as independent (no clustering). Analyzing each data set again with
+\code{\link[=mnlfa_ic]{mnlfa_ic()}} and comparing the results with the truth shows how the
+procedure performs in a design like yours.
 }

@@ -37,11 +37,9 @@
 #'   unchanged.
 #' @return A list with `responses` (N x J matrix), `theta` (the persons'
 #'   latent trait values), `person_data`, `item_data`, the coded person matrix
-#'   `x` and item matrix `W`, and `truth`: the generating values, with
-#'   `lambda` (slopes), `nu0` (intercepts), `alpha` (impact on the mean),
-#'   `omega` (impact on the log-variance), `gamma` (item-covariate effects),
-#'   `eps` (residual DIF), `nu` (the resulting DIF on the logit scale, items in
-#'   rows and person covariates in columns), `W`, `metric` and `form`.
+#'   `x` and item matrix `W`, and `truth`: the generating values, named as the
+#'   arguments (`slopes`, `intercepts`, `impact`, `variance_impact`, `effects`,
+#'   `residual_dif`, `form`).
 #' @examples
 #' sim <- simulate_mnlfa_ic(person_data = data.frame(female = rep(0:1, 100)),
 #'                          person = ~ female, slopes = rep(1, 8),
@@ -93,18 +91,24 @@ simulate_mnlfa_ic <- function(person_data, person, item_data = NULL, item = NULL
                                 impact, variance_impact, metric = .form_metric(form), seed = seed,
                                 cluster = cl, icc = icc)
   colnames(sim$dat) <- item_names
+  truth <- list(slopes = stats::setNames(slopes, item_names), intercepts = stats::setNames(intercepts, item_names),
+                impact = stats::setNames(impact, colnames(x)),
+                variance_impact = stats::setNames(variance_impact, colnames(x)),
+                effects = if (M > 0) `dimnames<-`(effects, list(colnames(W), colnames(x))) else NULL,
+                residual_dif = `dimnames<-`(residual_dif, list(item_names, colnames(x))), form = form)
   list(responses = sim$dat, theta = sim$theta, person_data = person_data,
-       item_data = if (is.null(item_data)) NULL else item_data, x = x, W = W,
-       truth = c(sim$truth, list(form = form)))
+       item_data = if (is.null(item_data)) NULL else item_data, x = x, W = W, truth = truth)
 }
 
 #' Simulate data sets from a fitted mnlfa_ic model
 #'
 #' Generates response data from the fitted model: the estimated slopes,
-#' intercepts, impact, variance impact and item-covariate effects, with
-#' residual DIF set as chosen. The persons' covariates and the pattern of
-#' missing responses are those of the data. Persons are simulated as
-#' independent (no clustering).
+#' intercepts, impact on the latent mean and log-variance, and item-covariate
+#' effects, with residual DIF set as chosen. The persons' covariates and the
+#' pattern of missing responses are those of the data. Persons are simulated
+#' as independent (no clustering). Analyzing each data set again with
+#' [mnlfa_ic()] and comparing the results with the truth shows how the
+#' procedure performs in a design like yours.
 #'
 #' @param object An `mnlfa_ic` fit.
 #' @param nsim Number of data sets.
@@ -115,7 +119,10 @@ simulate_mnlfa_ic <- function(person_data, person, item_data = NULL, item = NULL
 #'   `"none"`, or `"estimated"` (the estimates everywhere).
 #' @param ... Unused.
 #' @return A list of `nsim` response matrices, with the simulated truth as
-#'   attribute `"truth"`.
+#'   attribute `"truth"`: a list with `slopes`, `intercepts`, `impact` (on the
+#'   latent mean), `variance_impact` (on the latent log-variance), `effects`
+#'   (item-covariate effects, or `NULL`), `residual_dif` and `form`, named as
+#'   the arguments of [simulate_mnlfa_ic()].
 #' @export
 simulate.mnlfa_ic <- function(object, nsim = 1, seed = NULL, residual = c("flagged", "none", "estimated"), ...) {
   residual <- match.arg(residual)

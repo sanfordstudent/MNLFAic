@@ -72,11 +72,9 @@ unchanged.}
 \value{
 A list with \code{responses} (N x J matrix), \code{theta} (the persons'
 latent trait values), \code{person_data}, \code{item_data}, the coded person matrix
-\code{x} and item matrix \code{W}, and \code{truth}: the generating values, with
-\code{lambda} (slopes), \code{nu0} (intercepts), \code{alpha} (impact on the mean),
-\code{omega} (impact on the log-variance), \code{gamma} (item-covariate effects),
-\code{eps} (residual DIF), \code{nu} (the resulting DIF on the logit scale, items in
-rows and person covariates in columns), \code{W}, \code{metric} and \code{form}.
+\code{x} and item matrix \code{W}, and \code{truth}: the generating values, named as the
+arguments (\code{slopes}, \code{intercepts}, \code{impact}, \code{variance_impact}, \code{effects},
+\code{residual_dif}, \code{form}).
 }
 \description{
 Generates 0/1 responses from the model used by \code{\link[=mnlfa_ic]{mnlfa_ic()}}, with person

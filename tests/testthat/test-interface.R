@@ -171,6 +171,7 @@ test_that("simulate(): reproducible, keeps missing pattern and RNG stream", {
   expect_identical(colnames(s1[[1]]), colnames(r))
   set.seed(8); u <- stats::runif(1); set.seed(8); invisible(simulate(fit, seed = 1)); expect_identical(stats::runif(1), u)
   tr <- attr(simulate(fit, residual = "none", seed = 1), "truth")
+  expect_named(tr, c("slopes", "intercepts", "impact", "variance_impact", "effects", "residual_dif", "form"))
   expect_true(all(tr$residual_dif == 0))
 })
 
@@ -191,7 +192,8 @@ test_that("simulate_mnlfa_ic() checks its inputs", {
   e <- matrix(c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6), 3, 2, dimnames = list(c("r", "pos_b", "pos_c"), c("g", "h")))
   ref <- sim_eff(unname(e))
   expect_identical(sim_eff(e[c(3, 1, 2), 2:1])$responses, ref$responses)
-  expect_identical(unname(sim_eff(e)$truth$gamma), ref$truth$gamma)
+  expect_identical(sim_eff(e)$truth$effects, ref$truth$effects)
+  expect_named(ref$truth, c("slopes", "intercepts", "impact", "variance_impact", "effects", "residual_dif", "form"))
   e_bad <- e; rownames(e_bad)[1] <- "reading"
   expect_error(sim_eff(e_bad), "row names of `effects`")
   e_bad <- e; colnames(e_bad)[1] <- "female"
