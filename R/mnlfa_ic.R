@@ -60,16 +60,8 @@
 #' @references Chen, Y., Li, C., Ouyang, J., & Xu, G. (2023). DIF statistical
 #'   inference without knowing anchoring items. *Psychometrika, 88*, 1097-1122.
 #'   \doi{10.1007/s11336-023-09930-9}
+#' @example man-roxygen/example-fit.R
 #' @examples
-#' # Small example (a real analysis would use more persons, items and draws)
-#' sim <- simulate_mnlfa_ic(
-#'   person_data = data.frame(el = rep(0:1, 150)), person = ~ el,
-#'   item_data = data.frame(domain = rep(c("number", "geometry", "data"), length.out = 9)),
-#'   item = ~ domain, slopes = rep(1.2, 9), intercepts = seq(-1, 1, length.out = 9),
-#'   impact = -0.3, seed = 1)
-#' fit <- mnlfa_ic(sim$responses, sim$person_data, ~ el,
-#'                 item_data = sim$item_data, item = ~ domain,
-#'                 control = mnlfa_control(M = 200, n_pilot = 100, seed = 1))
 #' fit
 #' summary(fit)
 #' @export
@@ -142,14 +134,11 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
 #'   `fallback_em_iter`) cannot be changed here; they need a new call to
 #'   [mnlfa_ic()].
 #' @return The updated `mnlfa_ic` object.
+#' @example man-roxygen/example-fit.R
 #' @examples
-#' \donttest{
-#' sim <- simulate_mnlfa_ic(person_data = data.frame(g = rep(0:1, 200)), person = ~ g,
-#'                          slopes = rep(1, 10), intercepts = seq(-1, 1, length.out = 10),
-#'                          impact = 0.3, seed = 2)
-#' fit <- mnlfa_ic(sim$responses, sim$person_data, ~ g, inference = FALSE)
-#' fit <- infer(fit, M = 300, n_pilot = 100, seed = 1)
-#' }
+#' # 90% intervals and a different seed, without refitting Stage 1
+#' fit90 <- infer(fit, level = 0.9, seed = 2)
+#' confint(fit90)
 #' @export
 infer <- function(object, ...) {
   if (!inherits(object, "mnlfa_ic")) stop("`object` must be an mnlfa_ic fit.", call. = FALSE)

@@ -26,11 +26,17 @@ confidence level, the centering or the seed without repeating the Stage-1
 fit.
 }
 \examples{
-\donttest{
-sim <- simulate_mnlfa_ic(person_data = data.frame(g = rep(0:1, 200)), person = ~ g,
-                         slopes = rep(1, 10), intercepts = seq(-1, 1, length.out = 10),
-                         impact = 0.3, seed = 2)
-fit <- mnlfa_ic(sim$responses, sim$person_data, ~ g, inference = FALSE)
-fit <- infer(fit, M = 300, n_pilot = 100, seed = 1)
-}
+# Small example (a real analysis would use more persons, items and draws);
+# item 4 has residual DIF for English learners
+sim <- simulate_mnlfa_ic(
+  person_data = data.frame(el = rep(0:1, 150)), person = ~ el,
+  item_data = data.frame(domain = rep(c("number", "geometry", "data"), length.out = 16)),
+  item = ~ domain, slopes = rep(1.2, 16), intercepts = seq(-1, 1, length.out = 16),
+  impact = -0.3, residual_dif = matrix(replace(numeric(16), 4, 1)), seed = 6)
+fit <- mnlfa_ic(sim$responses, sim$person_data, ~ el,
+                item_data = sim$item_data, item = ~ domain,
+                control = mnlfa_control(M = 200, n_pilot = 100, seed = 1))
+# 90\% intervals and a different seed, without refitting Stage 1
+fit90 <- infer(fit, level = 0.9, seed = 2)
+confint(fit90)
 }

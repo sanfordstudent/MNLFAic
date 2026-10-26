@@ -65,6 +65,11 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
 #'   `category_impact` (impact for an item of each category with no residual
 #'   DIF), `flagged` (residual DIF flagged by Benjamini-Hochberg) and
 #'   `diagnostics` (estimated identification margin rho per person covariate).
+#' @example man-roxygen/example-fit.R
+#' @examples
+#' s <- summary(fit)
+#' s
+#' s$effects
 #' @export
 summary.mnlfa_ic <- function(object, ...) {
   .need_inference(object)
@@ -125,6 +130,11 @@ print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
 #'   reference person with all covariates at 0).
 #' @param ... Unused.
 #' @return A named vector, or a matrix for `"residual"` and `"total"`.
+#' @example man-roxygen/example-fit.R
+#' @examples
+#' coef(fit)              # impact on the latent mean
+#' coef(fit, "effects")   # item-covariate effects on DIF
+#' coef(fit, "residual")  # residual DIF, items x person covariates
 #' @export
 coef.mnlfa_ic <- function(object, type = c("mean", "variance", "effects", "residual", "total", "slopes", "intercepts"), ...) {
   type <- match.arg(type)
@@ -166,6 +176,11 @@ coef.mnlfa_ic <- function(object, type = c("mean", "variance", "effects", "resid
 #' @return A data frame with the covariate (and the term or item, where
 #'   relevant), the estimate `est`, and the confidence limits `ci_low` and
 #'   `ci_high`.
+#' @example man-roxygen/example-fit.R
+#' @examples
+#' confint(fit)                            # impact on the latent mean
+#' confint(fit, "effects")
+#' confint(fit, "variance", level = 0.9)   # Wald intervals, any level
 #' @export
 confint.mnlfa_ic <- function(object, parm = c("mean", "variance", "effects", "residual", "total"),
                              level = object$control$level, ...) {
@@ -218,6 +233,11 @@ vcov.mnlfa_ic <- function(object, ...) {
 #'   * `total`, `explained`, `residual`: point estimates of total DIF and its
 #'     two parts (total = explained + residual);
 #'   * the item covariates of each item (if any).
+#' @example man-roxygen/example-fit.R
+#' @examples
+#' dif_table(fit)
+#' dif_table(fit, type = "total")
+#' dif_table(fit, flagged_only = TRUE)
 #' @export
 dif_table <- function(object, type = c("residual", "total"), flagged_only = FALSE) {
   type <- match.arg(type)
@@ -279,6 +299,11 @@ dif_table <- function(object, type = c("residual", "total"), flagged_only = FALS
 #'   * `design`: a list with the correlations of the slopes with the item
 #'     covariates, the condition number and the highest-leverage items;
 #'   * `flags`: the flag set used.
+#' @example man-roxygen/example-fit.R
+#' @examples
+#' dg <- diagnose(fit, n_random = 50)
+#' dg
+#' dg$margin
 #' @export
 diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, tolerance = TRUE, n_random = 200) {
   flags <- match.arg(flags)

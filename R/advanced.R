@@ -73,6 +73,25 @@
 #'   `joint`, ...).
 #' * `ml1_condition_check()`: a list with `holds`, `rho` and `reason`.
 #' * `ml1_tolerance_table()`: a data frame, as in [diagnose()].
+#' @examples
+#' sim <- simulate_mnlfa_ic(
+#'   person_data = data.frame(el = rep(0:1, 150)), person = ~ el,
+#'   item_data = data.frame(domain = rep(c("number", "geometry", "data"), length.out = 16)),
+#'   item = ~ domain, slopes = rep(1.2, 16), intercepts = seq(-1, 1, length.out = 16),
+#'   impact = -0.3, residual_dif = matrix(replace(numeric(16), 4, 1)), seed = 6)
+#' # Stage 1, with matrix inputs
+#' s1 <- mnlfa_fit(sim$responses, sim$x)
+#' # Stage 2: impact and item-covariate effects at the identified solution
+#' s2 <- ml1_transform(s1$gamma.mat, s1$alpha.vec, s1$beta, sim$W)
+#' s2$alpha
+#' # Stage 3
+#' s3 <- ml1_inference(s1, sim$W, control = mnlfa_control(M = 200, n_pilot = 100, seed = 1))
+#' s3$impact
+#' # Would identification hold if items 1 and 4 had positive residual DIF?
+#' ml1_condition_check(s1$alpha.vec, sim$W, support = c(1, 4), signs = 1)
+#' # How many same-signed residual-DIF items could the number items absorb?
+#' ml1_tolerance_table(s1$alpha.vec, sim$W, groups = list(number = c(1, 4, 7, 10, 13, 16)),
+#'                     n_random = 50)
 #' @name stage-functions
 NULL
 

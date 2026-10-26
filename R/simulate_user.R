@@ -41,10 +41,21 @@
 #'   arguments (`slopes`, `intercepts`, `impact`, `variance_impact`, `effects`,
 #'   `residual_dif`, `form`).
 #' @examples
-#' sim <- simulate_mnlfa_ic(person_data = data.frame(female = rep(0:1, 100)),
-#'                          person = ~ female, slopes = rep(1, 8),
-#'                          intercepts = seq(-1, 1, length.out = 8), impact = 0.3, seed = 1)
+#' # 300 students (English-learner status, centered grade), 9 items (reading
+#' # load, content area); reading-heavy items are harder for English learners,
+#' # geometry items get easier with grade, and the variance grows with grade
+#' sim <- simulate_mnlfa_ic(
+#'   person_data = data.frame(el = rep(0:1, 150), grade = rep(-1:1, 100)),
+#'   person = ~ el + grade,
+#'   item_data = data.frame(reading = seq(10, 80, length.out = 9),
+#'                          domain = rep(c("number", "geometry", "data"), 3)),
+#'   item = ~ reading + domain, slopes = rep(1.2, 9), intercepts = seq(-1, 1, length.out = 9),
+#'   impact = c(-0.4, 0.5), variance_impact = c(0, 0.2),
+#'   effects = rbind(reading = c(0.3, 0), domain_data = c(0, 0), domain_geometry = c(0, -0.25)),
+#'   item_omit = list(domain = "number"), seed = 1)
 #' dim(sim$responses)
+#' colnames(sim$W)     # the coded item-covariate columns, in the order of `effects`
+#' sim$truth$effects
 #' @export
 simulate_mnlfa_ic <- function(person_data, person, item_data = NULL, item = NULL, slopes, intercepts,
                               impact, variance_impact = NULL, effects = NULL, residual_dif = NULL,
@@ -123,6 +134,15 @@ simulate_mnlfa_ic <- function(person_data, person, item_data = NULL, item = NULL
 #'   latent mean), `variance_impact` (on the latent log-variance), `effects`
 #'   (item-covariate effects, or `NULL`), `residual_dif` and `form`, named as
 #'   the arguments of [simulate_mnlfa_ic()].
+#' @example man-roxygen/example-fit.R
+#' @examples
+#' sims <- simulate(fit, nsim = 2, seed = 1)
+#' attr(sims, "truth")$impact
+#' # analyze one simulated data set again and compare with the truth
+#' refit <- mnlfa_ic(sims[[1]], sim$person_data, ~ el,
+#'                   item_data = sim$item_data, item = ~ domain,
+#'                   control = mnlfa_control(M = 200, n_pilot = 100, seed = 1))
+#' coef(refit)
 #' @export
 simulate.mnlfa_ic <- function(object, nsim = 1, seed = NULL, residual = c("flagged", "none", "estimated"), ...) {
   residual <- match.arg(residual)

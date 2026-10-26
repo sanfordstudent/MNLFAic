@@ -81,8 +81,19 @@ Generates 0/1 responses from the model used by \code{\link[=mnlfa_ic]{mnlfa_ic()
 and item covariates coded by the same rules.
 }
 \examples{
-sim <- simulate_mnlfa_ic(person_data = data.frame(female = rep(0:1, 100)),
-                         person = ~ female, slopes = rep(1, 8),
-                         intercepts = seq(-1, 1, length.out = 8), impact = 0.3, seed = 1)
+# 300 students (English-learner status, centered grade), 9 items (reading
+# load, content area); reading-heavy items are harder for English learners,
+# geometry items get easier with grade, and the variance grows with grade
+sim <- simulate_mnlfa_ic(
+  person_data = data.frame(el = rep(0:1, 150), grade = rep(-1:1, 100)),
+  person = ~ el + grade,
+  item_data = data.frame(reading = seq(10, 80, length.out = 9),
+                         domain = rep(c("number", "geometry", "data"), 3)),
+  item = ~ reading + domain, slopes = rep(1.2, 9), intercepts = seq(-1, 1, length.out = 9),
+  impact = c(-0.4, 0.5), variance_impact = c(0, 0.2),
+  effects = rbind(reading = c(0.3, 0), domain_data = c(0, 0), domain_geometry = c(0, -0.25)),
+  item_omit = list(domain = "number"), seed = 1)
 dim(sim$responses)
+colnames(sim$W)     # the coded item-covariate columns, in the order of `effects`
+sim$truth$effects
 }
