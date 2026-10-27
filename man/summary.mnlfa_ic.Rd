@@ -17,7 +17,9 @@ An object of class \code{summary.mnlfa_ic} with tables \code{impact},
 categories), \code{joint} (joint tests per categorical item covariate),
 \code{category_impact} (impact for an item of each category with no residual
 DIF), \code{flagged} (residual DIF flagged by Benjamini-Hochberg) and
-\code{diagnostics} (estimated identification margin rho per person covariate).
+\code{diagnostics} (estimated identification margin rho per person covariate)
+and \code{diagnostic_cells} (the cells used for rho, i.e. those with
+unadjusted p < .05).
 }
 \description{
 The main results of an analysis: impact on the latent mean and

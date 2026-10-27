@@ -142,6 +142,17 @@ test_that("methods: print, summary, coef, confint, vcov, dif_table, diagnose", {
   expect_false(is.null(dg$tolerance))
   expect_true(all(dg$design$leverage_top$item %in% fit$data$items))
   expect_output(print(dg), "Identification margin")
+  # the cells behind rho are listed, matching the unadjusted p < .05 cells
+  p05 <- fit$inference$residual$p < 0.05
+  expect_equal(nrow(dg$cells), sum(p05))
+  expect_equal(sum(dg$margin$n_flagged), sum(p05))
+  expect_setequal(paste(dg$cells$item, dg$cells$covariate),
+                  paste(fit$data$items[fit$inference$residual$item[p05]], fit$inference$residual$covariate[p05]))
+  if (any(p05)) {
+    expect_output(print(dg), "Cells used for rho")
+    expect_output(print(summary(fit)), "See dif_table\\(fit\\)")
+  }
+  expect_identical(summary(fit)$diagnostic_cells, dg$cells)
   expect_equal(nrow(diagnose(fit, flags = "offplane", tolerance = FALSE)$margin), 2)
 })
 

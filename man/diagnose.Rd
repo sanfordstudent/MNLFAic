@@ -33,6 +33,7 @@ A list of class \code{mnlfa_ic_diagnostics} with
 \item \code{margin}: a data frame with, per person covariate, the number of flagged
 cells used (\code{n_flagged}), \code{rho}, and whether the condition holds
 (\code{holds});
+\item \code{cells}: a data frame of the cells (\code{item}, \code{covariate}) used for rho;
 \item \code{tolerance} (or \code{NULL} without item covariates or with
 \code{tolerance = FALSE}): a data frame with, per group of items, the number
 of items (\code{n_items}) and the number of same-signed residual-DIF items

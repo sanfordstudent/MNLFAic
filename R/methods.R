@@ -64,7 +64,9 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
 #'   categories), `joint` (joint tests per categorical item covariate),
 #'   `category_impact` (impact for an item of each category with no residual
 #'   DIF), `flagged` (residual DIF flagged by Benjamini-Hochberg) and
-#'   `diagnostics` (estimated identification margin rho per person covariate).
+#'   `diagnostics` (estimated identification margin rho per person covariate)
+#'   and `diagnostic_cells` (the cells used for rho, i.e. those with
+#'   unadjusted p < .05).
 #' @example man-roxygen/example-fit.R
 #' @examples
 #' s <- summary(fit)
@@ -79,14 +81,14 @@ summary.mnlfa_ic <- function(object, ...) {
   effects <- if (!is.null(inf$category_effects)) inf$category_effects else
              if (!is.null(inf$gamma)) cbind(covariate = rep(object$data$covariates, each = nrow(inf$gamma) / object$data$K), inf$gamma) else NULL
   flagged <- dif_table(object, flagged_only = TRUE)
-  diag_rho <- tryCatch(diagnose(object, flags = "p05", tolerance = FALSE)$margin, error = function(e) NULL)
+  dg <- tryCatch(diagnose(object, flags = "p05", tolerance = FALSE), error = function(e) NULL)
   structure(list(call = object$call, data = object$data[c("N", "J", "K", "items", "covariates")],
                  form = object$control$form, units = .units(object), level = object$control$level,
                  fdr = object$control$fdr, convergence = object$stage1$convergence,
                  vcov_type = object$stage1$vcov_type,
                  impact = sel(inf$impact, cols), variance = .variance_table(object),
                  effects = sel(effects, cols), joint = inf$joint, category_impact = sel(inf$impact_by_category, cols),
-                 flagged = flagged, diagnostics = diag_rho),
+                 flagged = flagged, diagnostics = dg$margin, diagnostic_cells = dg$cells),
             class = "summary.mnlfa_ic")
 }
 
@@ -113,8 +115,22 @@ print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
   if (!is.null(x$diagnostics)) {
     cat("\nIdentification margin rho from cells with unadjusted p < .05 (rho < 1 required; values above 0.4 may indicate weaker identification):\n")
     print(rnd(x$diagnostics), row.names = FALSE)
+    .print_rho_cells(x$diagnostic_cells, x$diagnostics$covariate, "unadjusted p < .05")
   }
   invisible(x)
+}
+
+# The cells behind the estimated rho, one line per person covariate (nothing
+# if there are none).
+.print_rho_cells <- function(cells, covariates, label) {
+  if (is.null(cells) || nrow(cells) == 0) return(invisible(NULL))
+  cat(sprintf("Cells used for rho (%s):\n", label))
+  for (c in covariates) {
+    it <- cells$item[cells$covariate == c]
+    cat(sprintf("  %s: %s\n", c, if (length(it)) paste(it, collapse = ", ") else "none"))
+  }
+  cat("See dif_table(fit) for their estimates and p-values.\n")
+  invisible(NULL)
 }
 
 #' Coefficients of an mnlfa_ic fit
@@ -290,6 +306,7 @@ dif_table <- function(object, type = c("residual", "total"), flagged_only = FALS
 #'   * `margin`: a data frame with, per person covariate, the number of flagged
 #'     cells used (`n_flagged`), `rho`, and whether the condition holds
 #'     (`holds`);
+#'   * `cells`: a data frame of the cells (`item`, `covariate`) used for rho;
 #'   * `tolerance` (or `NULL` without item covariates or with
 #'     `tolerance = FALSE`): a data frame with, per group of items, the number
 #'     of items (`n_items`) and the number of same-signed residual-DIF items
@@ -321,6 +338,9 @@ diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, 
     r <- if (length(S) == 0) list(holds = TRUE, rho = 0) else .ml1_condition_check(f$alpha.vec, W, S, sign(est[S, c]), metric)
     data.frame(covariate = d$covariates[c], n_flagged = length(S), rho = r$rho, holds = r$holds)
   }))
+  idx <- which(fl, arr.ind = TRUE)
+  idx <- idx[order(idx[, 2], idx[, 1]), , drop = FALSE]
+  cells <- data.frame(item = d$items[idx[, 1]], covariate = d$covariates[idx[, 2]], stringsAsFactors = FALSE)
   tol <- NULL
   if (tolerance && !is.null(W)) {
     if (is.null(groups)) {
@@ -341,7 +361,7 @@ diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, 
   design <- .ml1_design_report(f$alpha.vec, W, metric)
   design$leverage_top$item <- d$items[design$leverage_top$item]
   rownames(design$leverage_top) <- NULL
-  structure(list(margin = margin, tolerance = tol, design = design, flags = flags),
+  structure(list(margin = margin, cells = cells, tolerance = tol, design = design, flags = flags),
             class = "mnlfa_ic_diagnostics")
 }
 
@@ -352,6 +372,7 @@ print.mnlfa_ic_diagnostics <- function(x, digits = 3, ...) {
               lab[[x$flags]]))
   m <- x$margin; m$rho <- round(m$rho, digits)
   print(m, row.names = FALSE)
+  .print_rho_cells(x$cells, m$covariate, lab[[x$flags]])
   if (!is.null(x$tolerance)) {
     cat("\nTolerance: same-signed residual-DIF items each group could absorb before identification fails\n",
         "(by_lambda: highest-slope items first; random_median / random_p05: over random orders):\n", sep = "")
