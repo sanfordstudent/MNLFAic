@@ -89,14 +89,15 @@ test_that("Stage 3 matches exactly given the same fit and seed", {
                logit = list(metric = "logit"))
   for (case in names(args)) {
     ref <- fx$stage3[[case]]
-    r <- do.call(.dif_inference_itemcov, c(list(f, W, des, M = 1000, seed = 11), args[[case]]))
+    # the research code's default DIF interval shape was equal-tailed
+    r <- do.call(.dif_inference_itemcov, c(list(f, W, des, M = 1000, seed = 11, ci_shape_dif = "equal"), args[[case]]))
     for (tab in c("residual", "total", "gamma", "category_effects", "joint", "impact", "impact_by_category"))
       if (!is.null(ref[[tab]])) expect_same_table(r[[tab]], ref[[tab]])
     expect_equal(as.numeric(r$settings$threshold_value), as.numeric(ref$settings$threshold_value))
     expect_equal(r$settings$n_residuals_zeroed, ref$settings$n_residuals_zeroed)
   }
   ref <- fx$stage3$noW
-  r <- .dif_inference_itemcov(f, NULL, M = 1000, seed = 11)
+  r <- .dif_inference_itemcov(f, NULL, M = 1000, seed = 11, ci_shape_dif = "equal")
   expect_same_table(r$residual, ref$residual)
   expect_same_table(r$impact, ref$impact)
 })
@@ -133,7 +134,7 @@ test_that("missing responses and clustering: fit, sandwich and Stage 3 match", {
   expect_equal(sqrt(diag(f$vcov)), sqrt(diag(ref$vcov)), tolerance = 1e-3)
   g <- as_fit(ref, nrow(inp$dat))
   for (case in c("cluster", "model", "normal")) {
-    r <- .dif_inference_itemcov(g, inp$design$W, inp$design, M = 1000, seed = 22,
+    r <- .dif_inference_itemcov(g, inp$design$W, inp$design, M = 1000, seed = 22, ci_shape_dif = "equal",
                                 vcov = if (case == "model") "model" else "auto",
                                 cluster_t = case != "normal")
     rr <- fx[[paste0("stage3_", case)]]
@@ -163,7 +164,8 @@ test_that("long test (J = 80, N = 1500) matches the research code", {
   expect_identical(f$anchor, ref$anchor)
   expect_equal(f$loglik, ref$loglik, tolerance = 1e-8)
   expect_lt(max(abs(f$gamma.mat - ref$gamma.mat)), 1e-4 * max(se))
-  r <- .dif_inference_itemcov(as_fit(ref, nrow(inp$dat)), inp$design$W, inp$design, M = 2000, seed = 33)
+  r <- .dif_inference_itemcov(as_fit(ref, nrow(inp$dat)), inp$design$W, inp$design, M = 2000, seed = 33,
+                              ci_shape_dif = "equal")
   expect_same_table(r$residual, fx$stage3$residual)
   expect_same_table(r$category_effects, fx$stage3$category_effects)
 })

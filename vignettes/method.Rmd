@@ -111,9 +111,9 @@ given by Chen et al. (2023). This means that:
    modified estimate in which residual DIF smaller than a threshold
    ($\sqrt{2 \log \log N}$ standard errors) is set to 0 (threshold centering;
    Fang & Santos, 2019).
-   - Intervals are symmetric for impact and item-covariate effects, and
-     equal-tailed for residual and total DIF.
-   - p-values for residual DIF are computed on the logit scale, because
+   - Intervals are symmetric: the estimate plus or minus a quantile of the
+     absolute bootstrap deviations.
+   - p-values for residual and total DIF are computed on the logit scale, because
      difficulty-scale draws divide by each draw's slope and are heavy-tailed;
      residual DIF is flagged by the Benjamini-Hochberg procedure across all items and
      person covariates.

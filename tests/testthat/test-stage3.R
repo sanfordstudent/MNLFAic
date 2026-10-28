@@ -17,7 +17,7 @@ baseline_design <- function(J) {
 test_that("null centering without item covariates reproduces Chen et al.'s inference exactly", {
   b <- baseline_fit(); ic <- b$fx$inference_call; o <- b$fx$inference
   inf0 <- .dif_inference_itemcov(b$fit, W = NULL, center = "null", metric = "logit",
-                                 M = ic$M, sig = ic$sig, seed = ic$seed)
+                                 M = ic$M, sig = ic$sig, seed = ic$seed, ci_shape_dif = "equal")
   expect_equal(inf0$residual$est, as.vector(o$gamma_ml1), tolerance = 1e-12)
   expect_equal(inf0$impact$est, o$beta_ml1, tolerance = 1e-12)
   expect_equal(inf0$residual$p, as.vector(o$p_values), tolerance = 1e-12)
@@ -51,12 +51,14 @@ test_that("internal consistency with item covariates (three centerings)", {
   expect_identical(r$impact$ci_low, r$impact$ci_sym_low)
   expect_identical(r$gamma$ci_high, r$gamma$ci_sym_high)
   expect_identical(r$category_effects$ci_low, r$category_effects$ci_sym_low)
-  expect_identical(r$residual$ci_low, r$residual$ci_eq_low)
-  expect_identical(r$total$ci_high, r$total$ci_eq_high)
+  expect_identical(r$residual$ci_low, r$residual$ci_sym_low)
+  expect_identical(r$total$ci_high, r$total$ci_sym_high)
   expect_equal(r$impact$ci_sym_high - r$impact$est, r$impact$est - r$impact$ci_sym_low, tolerance = 1e-12)
   r_eq <- .dif_inference_itemcov(b$fit, W = des$W, design = des, metric = "logit", M = M, seed = 11,
-                                 ci_shape_effects = "equal")
+                                 ci_shape_effects = "equal", ci_shape_dif = "equal")
   expect_identical(r_eq$impact$ci_low, r_eq$impact$ci_eq_low)
+  expect_identical(r_eq$residual$ci_low, r_eq$residual$ci_eq_low)
+  expect_identical(r_eq$total$ci_high, r_eq$total$ci_eq_high)
   expect_identical(r_eq$impact$est, r$impact$est)
   expect_identical(r_eq$impact$ci_sym_low, r$impact$ci_sym_low)
   r3 <- .dif_inference_itemcov(b$fit, W = des$W, design = des, metric = "logit", M = M, seed = 11, threshold_z = 3)

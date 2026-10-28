@@ -42,9 +42,9 @@
 #'   (\eqn{\sqrt{2 \log(JK)}}{sqrt(2 log(JK))}), or a number.
 #' @param level Confidence level of the intervals.
 #' @param fdr Benjamini-Hochberg false discovery rate for flagging residual DIF.
-#' @param ci_effects,ci_dif Interval shape, `"symmetric"` or `"equal"`
-#'   (equal-tailed), for impact and item-covariate effects (default symmetric)
-#'   and for residual and total DIF (default equal-tailed). A symmetric interval
+#' @param ci_effects,ci_dif Interval shape, `"symmetric"` (default) or `"equal"`
+#'   (equal-tailed): `ci_effects` for impact and item-covariate effects, `ci_dif`
+#'   for residual and total DIF. A symmetric interval
 #'   is the estimate plus or minus a quantile of the absolute bootstrap
 #'   deviations, so it is centered on the estimate; an equal-tailed interval
 #'   uses the lower and upper quantiles of the deviations separately (e.g.,
@@ -76,7 +76,7 @@ mnlfa_control <- function(form = c("difficulty", "slope-intercept"), item_omit =
                           max_newton = 25, max_fallback = 3, fallback_em_iter = 50,
                           M = 10000, n_pilot = 2000, center = c("threshold", "estimate", "null"),
                           threshold = "sqrt2loglogN", level = 0.95, fdr = 0.05,
-                          ci_effects = c("symmetric", "equal"), ci_dif = c("equal", "symmetric"),
+                          ci_effects = c("symmetric", "equal"), ci_dif = c("symmetric", "equal"),
                           vcov = c("auto", "model"), cluster_t = TRUE, seed = NULL, verbose = FALSE) {
   form <- match.arg(form); center <- match.arg(center)
   ci_effects <- match.arg(ci_effects); ci_dif <- match.arg(ci_dif); vcov <- match.arg(vcov)

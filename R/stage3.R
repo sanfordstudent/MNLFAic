@@ -106,7 +106,7 @@
                                    M = 10000, sig = 0.05, seed = NULL,
                                    threshold_z = "sqrt2loglogN", n_pilot = 2000, fdr = 0.05,
                                    ci_shape_effects = c("symmetric", "equal"),
-                                   ci_shape_dif = c("equal", "symmetric"),
+                                   ci_shape_dif = c("symmetric", "equal"),
                                    N = NULL, keep_draws = FALSE, vcov = c("auto", "model"),
                                    cluster_t = TRUE) {
   vcov <- match.arg(vcov)

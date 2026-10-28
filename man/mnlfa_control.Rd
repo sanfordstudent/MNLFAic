@@ -23,7 +23,7 @@ mnlfa_control(
   level = 0.95,
   fdr = 0.05,
   ci_effects = c("symmetric", "equal"),
-  ci_dif = c("equal", "symmetric"),
+  ci_dif = c("symmetric", "equal"),
   vcov = c("auto", "model"),
   cluster_t = TRUE,
   seed = NULL,
@@ -83,9 +83,9 @@ item-covariate effects were too narrow in simulations).}
 
 \item{fdr}{Benjamini-Hochberg false discovery rate for flagging residual DIF.}
 
-\item{ci_effects, ci_dif}{Interval shape, \code{"symmetric"} or \code{"equal"}
-(equal-tailed), for impact and item-covariate effects (default symmetric)
-and for residual and total DIF (default equal-tailed). A symmetric interval
+\item{ci_effects, ci_dif}{Interval shape, \code{"symmetric"} (default) or \code{"equal"}
+(equal-tailed): \code{ci_effects} for impact and item-covariate effects, \code{ci_dif}
+for residual and total DIF. A symmetric interval
 is the estimate plus or minus a quantile of the absolute bootstrap
 deviations, so it is centered on the estimate; an equal-tailed interval
 uses the lower and upper quantiles of the deviations separately (e.g.,
