@@ -127,10 +127,10 @@ Wald intervals from Stage 1.
 In simulation studies, residual-DIF tests held their nominal Type I error and
 false discovery rate, and intervals for impact and item-covariate effects had
 close to nominal coverage when residual DIF was sparse. The main limitation is
-**dense and asymmetric residual DIF**: when many items have residual DIF of the
-same sign (for example, 30% of the items, a substantial majority in the same
-direction), the Stage-2 estimates are biased and the intervals for
-item-covariate effects undercover. The diagnostics in `diagnose()` flag some,
+**residual DIF in many items in the same direction**, even well short of half
+of the items: for example, with residual DIF in 30% of the items, three-quarters
+of it in the same direction, the Stage-2 estimates are biased and the intervals
+for item-covariate effects undercover. The diagnostics in `diagnose()` flag some,
 but not all, of these situations.
 
 Other limitations of the current version:
