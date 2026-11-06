@@ -16,17 +16,13 @@ An object of class \code{summary.mnlfa_ic} with tables \code{impact},
 \code{variance}, \code{effects} (item-covariate effects, including implied
 categories), \code{joint} (joint tests per categorical item covariate),
 \code{category_impact} (impact for an item of each category with no residual
-DIF), \code{flagged} (residual DIF flagged by Benjamini-Hochberg) and
-\code{diagnostics} (estimated identification margin rho per person covariate)
-and \code{diagnostic_cells} (the cells used for rho, i.e. those with
-unadjusted p < .05).
+DIF) and \code{flagged} (residual DIF flagged by Benjamini-Hochberg).
 }
 \description{
 The main results of an analysis: impact on the latent mean and
 log-variance, item-covariate effects on DIF, joint tests for categorical
-item covariates, impact for an item of each category, flagged residual DIF
-and the estimated identification margin. See \code{vignette("MNLFAic")} for how
-to read each table.
+item covariates, impact for an item of each category, and flagged residual
+DIF. See \code{vignette("MNLFAic")} for how to read each table.
 }
 \examples{
 # Small example (a real analysis would use more persons, items and draws);

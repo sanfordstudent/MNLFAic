@@ -254,7 +254,7 @@
     category_effects = category_effects, joint = joint, impact = impact,
     impact_by_category = impact_by_category, point = est,
     # cells the threshold centering kept off the fitted plane (J x K logical;
-    # NULL for other centers): a less conservative flag set for diagnostics
+    # NULL for other centers)
     off_plane = if (center == "threshold") matrix(!small, J, K, dimnames = list(NULL, cov_names)) else NULL,
     settings = list(center = center, metric = metric, M = M, sig = sig, seed = seed,
                     threshold_z = if (center == "threshold") threshold_z else NA,

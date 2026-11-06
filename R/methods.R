@@ -53,9 +53,8 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
 #'
 #' The main results of an analysis: impact on the latent mean and
 #' log-variance, item-covariate effects on DIF, joint tests for categorical
-#' item covariates, impact for an item of each category, flagged residual DIF
-#' and the estimated identification margin. See `vignette("MNLFAic")` for how
-#' to read each table.
+#' item covariates, impact for an item of each category, and flagged residual
+#' DIF. See `vignette("MNLFAic")` for how to read each table.
 #'
 #' @param object An `mnlfa_ic` fit.
 #' @param ... Unused.
@@ -63,10 +62,7 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
 #'   `variance`, `effects` (item-covariate effects, including implied
 #'   categories), `joint` (joint tests per categorical item covariate),
 #'   `category_impact` (impact for an item of each category with no residual
-#'   DIF), `flagged` (residual DIF flagged by Benjamini-Hochberg) and
-#'   `diagnostics` (estimated identification margin rho per person covariate)
-#'   and `diagnostic_cells` (the cells used for rho, i.e. those with
-#'   unadjusted p < .05).
+#'   DIF) and `flagged` (residual DIF flagged by Benjamini-Hochberg).
 #' @example man-roxygen/example-fit.R
 #' @examples
 #' s <- summary(fit)
@@ -81,14 +77,13 @@ summary.mnlfa_ic <- function(object, ...) {
   effects <- if (!is.null(inf$category_effects)) inf$category_effects else
              if (!is.null(inf$gamma)) cbind(covariate = rep(object$data$covariates, each = nrow(inf$gamma) / object$data$K), inf$gamma) else NULL
   flagged <- dif_table(object, flagged_only = TRUE)
-  dg <- tryCatch(diagnose(object, flags = "p05", tolerance = FALSE), error = function(e) NULL)
   structure(list(call = object$call, data = object$data[c("N", "J", "K", "items", "covariates")],
                  form = object$control$form, units = .units(object), level = object$control$level,
                  fdr = object$control$fdr, convergence = object$stage1$convergence,
                  vcov_type = object$stage1$vcov_type,
                  impact = sel(inf$impact, cols), variance = .variance_table(object),
                  effects = sel(effects, cols), joint = inf$joint, category_impact = sel(inf$impact_by_category, cols),
-                 flagged = flagged, diagnostics = dg$margin, diagnostic_cells = dg$cells),
+                 flagged = flagged),
             class = "summary.mnlfa_ic")
 }
 
@@ -112,25 +107,7 @@ print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
   cat(sprintf("\nResidual DIF flagged (Benjamini-Hochberg, FDR %g%%; %s):\n", 100 * x$fdr, x$units))
   if (nrow(x$flagged) == 0) cat("  none\n") else
     print(rnd(x$flagged[, c("item", "covariate", "est", "ci_low", "ci_high", "p_bh", "total")]), row.names = FALSE)
-  if (!is.null(x$diagnostics)) {
-    cat("\nIdentification margin rho from cells with unadjusted p < .05 (rho < 1 required; values above 0.4 may indicate weaker identification):\n")
-    print(rnd(x$diagnostics), row.names = FALSE)
-    .print_rho_cells(x$diagnostic_cells, x$diagnostics$covariate, "unadjusted p < .05")
-  }
   invisible(x)
-}
-
-# The cells behind the estimated rho, one line per person covariate (nothing
-# if there are none).
-.print_rho_cells <- function(cells, covariates, label) {
-  if (is.null(cells) || nrow(cells) == 0) return(invisible(NULL))
-  cat(sprintf("Cells used for rho (%s):\n", label))
-  for (c in covariates) {
-    it <- cells$item[cells$covariate == c]
-    cat(sprintf("  %s: %s\n", c, if (length(it)) paste(it, collapse = ", ") else "none"))
-  }
-  cat("See dif_table(fit) for their estimates and p-values.\n")
-  invisible(NULL)
 }
 
 #' Coefficients of an mnlfa_ic fit
@@ -275,38 +252,23 @@ dif_table <- function(object, type = c("residual", "total"), flagged_only = FALS
 
 #' Identification diagnostics
 #'
-#' The estimated identification margin rho per person covariate (rho < 1 is
-#' required; computed from a set of flagged cells, their signs and the
-#' estimated slopes), a tolerance table (how many same-signed residual-DIF
-#' items each group of items could absorb), and a report on the Stage-2
-#' design.
+#' Two descriptions of how much residual DIF the identification can absorb,
+#' computed from the estimated slopes and the item covariates: a tolerance
+#' table (how many same-signed residual-DIF items each group of items could
+#' contain before identification fails) and a report on the Stage-2 design.
 #'
-#' Note that rho is estimated, and tends to be too low when residual DIF goes
-#' undetected, so it is provided as an approximate diagnostic, not a formal
-#' test of identification. The default flag set (`"p05"`) is deliberately less
-#' conservative than the Benjamini-Hochberg flags, so that less residual DIF
-#' goes undetected. Simulations suggest that a value above about 0.4 may
-#' indicate weaker identification, which results in confidence intervals for
-#' item-covariate effects that are too narrow.
+#' Neither uses the estimated residual DIF. The sparsity assumption concerns
+#' the true, unknown pattern of residual DIF, and cannot be tested from the
+#' data. To check whether a hypothesized pattern of residual DIF would be
+#' identified, and by what margin, use [ml1_condition_check()].
 #'
-#' These diagnostics check whether the estimated pattern of residual DIF
-#' satisfies the sparsity condition; the assumption itself concerns the true,
-#' unknown pattern and cannot be tested from the data.
-#'
-#' @param object An `mnlfa_ic` fit with inference.
-#' @param flags Flag set for rho: `"p05"` (unadjusted p < .05; default),
-#'   `"bh"` (Benjamini-Hochberg flags) or `"offplane"` (cells kept off the
-#'   fitted plane by threshold centering).
+#' @param object An `mnlfa_ic` fit.
 #' @param groups Named list of item-index vectors for the tolerance table.
 #'   Default: the levels of each categorical item covariate and the lowest and
 #'   highest 10% of each continuous one.
 #' @param tolerance Compute the tolerance table.
 #' @param n_random Number of random orders in the tolerance table.
 #' @return A list of class `mnlfa_ic_diagnostics` with
-#'   * `margin`: a data frame with, per person covariate, the number of flagged
-#'     cells used (`n_flagged`), `rho`, and whether the condition holds
-#'     (`holds`);
-#'   * `cells`: a data frame of the cells (`item`, `covariate`) used for rho;
 #'   * `tolerance` (or `NULL` without item covariates or with
 #'     `tolerance = FALSE`): a data frame with, per group of items, the number
 #'     of items (`n_items`) and the number of same-signed residual-DIF items
@@ -314,33 +276,16 @@ dif_table <- function(object, type = c("residual", "total"), flagged_only = FALS
 #'     (`by_lambda`, typically the worst case) and over random orders (median
 #'     `random_median` and 5th percentile `random_p05`);
 #'   * `design`: a list with the correlations of the slopes with the item
-#'     covariates, the condition number and the highest-leverage items;
-#'   * `flags`: the flag set used.
+#'     covariates, the condition number and the highest-leverage items.
 #' @example man-roxygen/example-fit.R
 #' @examples
 #' dg <- diagnose(fit, n_random = 50)
 #' dg
-#' dg$margin
+#' dg$tolerance
 #' @export
-diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, tolerance = TRUE, n_random = 200) {
-  flags <- match.arg(flags)
-  .need_inference(object)
-  inf <- object$inference; d <- object$data; f <- object$stage1
+diagnose <- function(object, groups = NULL, tolerance = TRUE, n_random = 200) {
+  d <- object$data; f <- object$stage1
   W <- .W_of(object); metric <- .form_metric(object$control$form)
-  est <- matrix(inf$residual$est, d$J, d$K)
-  fl <- switch(flags,
-               p05 = matrix(inf$residual$p < 0.05, d$J, d$K),
-               bh = matrix(inf$residual$flag, d$J, d$K),
-               offplane = { if (is.null(inf$off_plane)) stop("flags = \"offplane\" needs threshold centering.", call. = FALSE)
-                            unname(inf$off_plane) })
-  margin <- do.call(rbind, lapply(seq_len(d$K), function(c) {
-    S <- which(fl[, c])
-    r <- if (length(S) == 0) list(holds = TRUE, rho = 0) else .ml1_condition_check(f$alpha.vec, W, S, sign(est[S, c]), metric)
-    data.frame(covariate = d$covariates[c], n_flagged = length(S), rho = r$rho, holds = r$holds)
-  }))
-  idx <- which(fl, arr.ind = TRUE)
-  idx <- idx[order(idx[, 2], idx[, 1]), , drop = FALSE]
-  cells <- data.frame(item = d$items[idx[, 1]], covariate = d$covariates[idx[, 2]], stringsAsFactors = FALSE)
   tol <- NULL
   if (tolerance && !is.null(W)) {
     if (is.null(groups)) {
@@ -361,25 +306,19 @@ diagnose <- function(object, flags = c("p05", "bh", "offplane"), groups = NULL, 
   design <- .ml1_design_report(f$alpha.vec, W, metric)
   design$leverage_top$item <- d$items[design$leverage_top$item]
   rownames(design$leverage_top) <- NULL
-  structure(list(margin = margin, cells = cells, tolerance = tol, design = design, flags = flags),
-            class = "mnlfa_ic_diagnostics")
+  structure(list(tolerance = tol, design = design), class = "mnlfa_ic_diagnostics")
 }
 
 #' @export
 print.mnlfa_ic_diagnostics <- function(x, digits = 3, ...) {
-  lab <- c(p05 = "unadjusted p < .05", bh = "Benjamini-Hochberg flags", offplane = "cells off the fitted plane")
-  cat(sprintf("Identification margin rho from %s (rho < 1 required; values above 0.4 may indicate weaker identification):\n",
-              lab[[x$flags]]))
-  m <- x$margin; m$rho <- round(m$rho, digits)
-  print(m, row.names = FALSE)
-  .print_rho_cells(x$cells, m$covariate, lab[[x$flags]])
   if (!is.null(x$tolerance)) {
-    cat("\nTolerance: same-signed residual-DIF items each group could absorb before identification fails\n",
+    cat("Tolerance: same-signed residual-DIF items each group could absorb before identification fails\n",
         "(by_lambda: highest-slope items first; random_median / random_p05: over random orders):\n", sep = "")
     print(x$tolerance, row.names = FALSE)
+    cat("\n")
   }
   ds <- x$design
-  cat(sprintf("\nStage-2 design: %d items, %d columns; condition number %.2f\n", ds$J, ds$p, ds$condition_number))
+  cat(sprintf("Stage-2 design: %d items, %d columns; condition number %.2f\n", ds$J, ds$p, ds$condition_number))
   if (!is.null(ds$cor_slope_with_W)) {
     cat("Correlation of slopes with item covariates:\n")
     print(round(ds$cor_slope_with_W, digits))

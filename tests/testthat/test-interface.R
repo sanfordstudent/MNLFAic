@@ -137,23 +137,18 @@ test_that("methods: print, summary, coef, confint, vcov, dif_table, diagnose", {
   expect_true(all(c("aoa", "pos") %in% names(dt)))
   expect_equal(nrow(dif_table(fit, flagged_only = TRUE)), sum(fit$inference$residual$flag))
   dg <- diagnose(fit, n_random = 10)
-  expect_equal(nrow(dg$margin), 2)
-  expect_true(all(dg$margin$rho >= 0))
+  expect_named(dg, c("tolerance", "design"))
   expect_false(is.null(dg$tolerance))
   expect_true(all(dg$design$leverage_top$item %in% fit$data$items))
-  expect_output(print(dg), "Identification margin")
-  # the cells behind rho are listed, matching the unadjusted p < .05 cells
-  p05 <- fit$inference$residual$p < 0.05
-  expect_equal(nrow(dg$cells), sum(p05))
-  expect_equal(sum(dg$margin$n_flagged), sum(p05))
-  expect_setequal(paste(dg$cells$item, dg$cells$covariate),
-                  paste(fit$data$items[fit$inference$residual$item[p05]], fit$inference$residual$covariate[p05]))
-  if (any(p05)) {
-    expect_output(print(dg), "Cells used for rho")
-    expect_output(print(summary(fit)), "See dif_table\\(fit\\)")
-  }
-  expect_identical(summary(fit)$diagnostic_cells, dg$cells)
-  expect_equal(nrow(diagnose(fit, flags = "offplane", tolerance = FALSE)$margin), 2)
+  expect_output(print(dg), "Tolerance")
+  expect_output(print(dg), "Stage-2 design")
+  expect_null(diagnose(fit, tolerance = FALSE)$tolerance)
+  # no margin computed from the estimated residual DIF, in diagnose() or summary()
+  expect_false(any(grepl("rho|margin", capture.output(print(dg)), ignore.case = TRUE)))
+  expect_false(any(c("diagnostics", "diagnostic_cells") %in% names(summary(fit))))
+  expect_false(any(grepl("rho|margin", capture.output(print(summary(fit))), ignore.case = TRUE)))
+  # the diagnostics depend on the slopes and item covariates only, not on the inference
+  expect_identical(diagnose(infer(fit, center = "estimate"), n_random = 10), dg)
 })
 
 test_that("infer() reproduces the stored inference and changes settings", {

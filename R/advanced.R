@@ -18,8 +18,8 @@
 #'   among the solutions that fit equally well, the one satisfying the
 #'   sparsity assumption.
 #' * `ml1_inference()`: Stage 3, the bootstrap.
-#' * `ml1_condition_check()`: the identification condition and its margin rho
-#'   for a given residual-DIF pattern.
+#' * `ml1_condition_check()`: whether a hypothesized residual-DIF pattern
+#'   would be identified, and its margin rho (rho < 1 required).
 #' * `ml1_tolerance_table()`: how many same-signed residual-DIF items each
 #'   group of items can absorb.
 #'

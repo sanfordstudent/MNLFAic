@@ -86,8 +86,10 @@ given by Chen et al. (2023). This means that:
 - In practice, items with residual DIF in the same direction must be fewer
   than half of the items, both overall and within each category of a
   categorical item covariate (the exact condition weights items by their
-  slopes). It can be checked for a given pattern of residual DIF; its margin
-  $\rho$ must be below 1 (`diagnose()`, `ml1_condition_check()`).
+  slopes). Whether a hypothesized pattern of residual DIF satisfies it can be
+  checked with `ml1_condition_check()`: its margin $\rho$ must be below 1.
+  `diagnose()` reports how many same-signed residual-DIF items each group of
+  items could contain before it fails.
 
 ## The three stages
 
@@ -130,17 +132,15 @@ close to nominal coverage when residual DIF was sparse. The main limitation is
 **residual DIF in many items in the same direction**, even well short of half
 of the items: for example, with residual DIF in 30% of the items, three-quarters
 of it in the same direction, the Stage-2 estimates are biased and the intervals
-for item-covariate effects undercover. The diagnostics in `diagnose()` flag some,
-but not all, of these situations.
+for item-covariate effects undercover.
 
 Other limitations of the current version:
 
 - uniform DIF only (slopes do not depend on covariates);
 - one latent dimension and binary items;
 - the cluster-robust covariance (`cluster =`) is experimental;
-- the sparsity assumption cannot be tested from the data: `diagnose()` checks
-  whether the estimated pattern of residual DIF satisfies the sparsity
-  condition, but the assumption concerns the true, unknown pattern.
+- the sparsity assumption concerns the true, unknown pattern of residual DIF
+  and cannot be tested from the data.
 
 ## References
 

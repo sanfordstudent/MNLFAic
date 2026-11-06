@@ -136,8 +136,8 @@ role in Stage 1, so \code{mnlfa_fit()} has no \code{W} argument.
 among the solutions that fit equally well, the one satisfying the
 sparsity assumption.
 \item \code{ml1_inference()}: Stage 3, the bootstrap.
-\item \code{ml1_condition_check()}: the identification condition and its margin rho
-for a given residual-DIF pattern.
+\item \code{ml1_condition_check()}: whether a hypothesized residual-DIF pattern
+would be identified, and its margin rho (rho < 1 required).
 \item \code{ml1_tolerance_table()}: how many same-signed residual-DIF items each
 group of items can absorb.
 }

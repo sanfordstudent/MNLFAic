@@ -181,8 +181,6 @@ English learners, or for students in higher grades).
 - **Residual DIF flagged**: items with additional DIF not explained by the item
   covariates, flagged by the Benjamini-Hochberg procedure at a 5% false
   discovery rate across all items and person covariates.
-- **Identification margin**: a check of the sparsity assumption (see
-  [Checking the identifying assumption](#checking-the-identifying-assumption)).
 
 ### Item-level results
 
@@ -225,31 +223,43 @@ coef(fit, "effects")
 confint(fit, "effects")
 ```
 
-## Checking the identifying assumption
+## The identifying assumption
 
 The model is identified by assuming that, for each person covariate, residual
 DIF is sparse: the slope-weighted total of absolute residual DIF is smallest at
 the true values. In practice, items with residual DIF in the same direction
 must be fewer than half of the items, both overall and within each category of
 a categorical item covariate (the exact condition weights items by their
-slopes). `diagnose()` reports three checks.
+slopes).
+
+The assumption concerns the true, unknown residual DIF, so it cannot be tested
+from the data. Residual DIF estimated or flagged under the assumption cannot
+show that it fails. What can be described is how much room the design leaves:
+`diagnose()` uses only the estimated slopes and the item covariates.
 
 ```{r}
 diagnose(fit)
 ```
 
-- **Margin rho**, computed from the cells with unadjusted p < .05: the
-  assumption requires rho < 1. Note that rho is estimated, and tends to be too
-  low when residual DIF goes undetected, so it is provided as an approximate
-  diagnostic, not a formal test of identification. Simulations suggest that a
-  value above about 0.4 may indicate weaker identification, which results in
-  confidence intervals for item-covariate effects that are too narrow.
 - **Tolerance**: how many same-signed residual-DIF items each group of items
   (each category, and the items with the lowest and highest 10% of each
-  continuous covariate) could contain before the assumption fails.
+  continuous covariate) could contain before the assumption fails. The items
+  are added in order of decreasing slope (`by_lambda`, typically the worst
+  case) or in random orders.
 - **Design**: correlations of the slopes with the item covariates (high values
   make impact hard to separate from item-covariate DIF), the condition number,
   and the items with the most leverage.
+
+Whether a particular pattern of residual DIF would be identified, for example
+one suggested by substantive knowledge of the items, can be checked with
+`ml1_condition_check()`:
+
+```{r}
+# Would identification hold if all number items had residual DIF of the same sign?
+number <- which(items$domain == "number")
+ml1_condition_check(coef(fit, "slopes"), fit$coding$design$W, support = number, signs = 1,
+                    margin = FALSE)$holds
+```
 
 ## Without item covariates
 
