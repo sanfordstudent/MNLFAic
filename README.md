@@ -6,7 +6,7 @@ Anchor-free estimation and inference for differential item functioning (DIF) in 
 - **Identification:** no anchor items are specified. The model is identified by assuming that residual DIF is sparse, which generalizes the minimal-L1 condition of Chen et al. (2023). Without item covariates, the analysis is Chen et al.'s method extended to an arbitrary number of continuous or categorical covariates.
 - **Inference:** a threshold-centered parametric bootstrap: the model estimates are redrawn from their estimated sampling distribution and the identification step is repeated on each draw, with the draws centered at estimates in which residual DIF smaller than a threshold (in standard errors) is set to zero. This procedure gives confidence intervals and null hypothesis statistical tests for impact, item-covariate effects and item-specific DIF, with Benjamini-Hochberg flags for residual DIF.
 
-**Status:** version 0.1.0, the first release. The interface may still change.
+**Status:** version 0.1.1. The interface may still change.
 
 ## Installation
 

@@ -15,6 +15,11 @@ baseline_design <- function(J) {
 }
 
 test_that("null centering without item covariates reproduces Chen et al.'s inference exactly", {
+  # The reference p-values and intervals come from bootstrap draws made on
+  # Windows. MASS::mvrnorm() draws through an eigendecomposition whose result
+  # depends on the linear-algebra library, so these values are reproducible
+  # only on the same platform.
+  skip_on_cran()
   b <- baseline_fit(); ic <- b$fx$inference_call; o <- b$fx$inference
   inf0 <- .dif_inference_itemcov(b$fit, W = NULL, center = "null", metric = "logit",
                                  M = ic$M, sig = ic$sig, seed = ic$seed, ci_shape_dif = "equal")

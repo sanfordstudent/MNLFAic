@@ -1,3 +1,9 @@
+# MNLFAic 0.1.1
+
+* First CRAN submission. No changes to the package code: a test that
+  reproduces bootstrap draws made on one platform is skipped on CRAN, since
+  `MASS::mvrnorm()` gives platform-dependent draws.
+
 # MNLFAic 0.1.0
 
 * First release: anchor-free inference for uniform (i.e., difficulty, or
