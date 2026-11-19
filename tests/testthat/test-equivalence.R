@@ -83,6 +83,11 @@ test_that("Stage 2 matches exactly (difficulty, logit, no item covariates)", {
 })
 
 test_that("Stage 3 matches exactly given the same fit and seed", {
+  # The reference tables come from bootstrap draws made on one platform.
+  # MASS::mvrnorm() draws through an eigendecomposition whose result depends
+  # on the linear-algebra library, so these values are reproducible only on
+  # the same platform.
+  skip_on_cran()
   fx <- fixture("fixture_small"); f <- as_fit(fx$fit_auto, nrow(fx$input$dat))
   W <- fx$input$design$W; des <- fx$input$design
   args <- list(threshold = list(), estimate = list(center = "estimate"), null = list(center = "null"),
@@ -132,6 +137,8 @@ test_that("missing responses and clustering: fit, sandwich and Stage 3 match", {
   expect_identical(f$n_clusters, ref$n_clusters)
   expect_lt(max(abs(f$gamma.mat - ref$gamma.mat)), 1e-4 * max(se))
   expect_equal(sqrt(diag(f$vcov)), sqrt(diag(ref$vcov)), tolerance = 1e-3)
+  # Stage 3: platform-dependent bootstrap draws (see "Stage 3 matches exactly")
+  skip_on_cran()
   g <- as_fit(ref, nrow(inp$dat))
   for (case in c("cluster", "model", "normal")) {
     r <- .dif_inference_itemcov(g, inp$design$W, inp$design, M = 1000, seed = 22, ci_shape_dif = "equal",
