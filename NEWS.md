@@ -1,3 +1,11 @@
+# MNLFAic (development version)
+
+* `print()` and `summary()` now label the covariance that the inference
+  actually used. Previously, a fit with `cluster =` was labelled
+  "cluster-robust" even after `infer(fit, vcov = "model")`, which reruns the
+  inference with the model-based covariance. The estimates, intervals and
+  p-values were not affected.
+
 # MNLFAic 0.1.1
 
 * First CRAN submission. No changes to the package code: a test that

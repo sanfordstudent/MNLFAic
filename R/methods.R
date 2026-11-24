@@ -5,6 +5,15 @@
   else "latent SD; + = harder for higher values of the person covariate"
 }
 
+# Covariance the reported inference uses: "cluster" or "model". From the
+# Stage-3 settings when there is inference; otherwise what infer() would use
+# (the Stage-1 covariance, unless mnlfa_control(vcov = "model") overrides it).
+.vcov_used <- function(object) {
+  used <- object$inference$settings$vcov_type
+  if (!is.null(used)) return(used)
+  if (identical(object$stage1$vcov_type, "cluster") && !identical(object$control$vcov, "model")) "cluster" else "model"
+}
+
 .need_inference <- function(object) {
   if (is.null(object$inference)) stop("No inference yet: run infer(object) or mnlfa_ic(..., inference = TRUE).", call. = FALSE)
 }
@@ -32,7 +41,7 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
   cat(sprintf("  form: %s; Stage 1 %s (%d Newton steps, %d EM fallbacks)%s\n", x$control$form,
               if (f$convergence$converged) "converged" else "DID NOT CONVERGE",
               f$convergence$newton_iterations, f$convergence$em_fallbacks,
-              if (identical(f$vcov_type, "cluster")) sprintf("; cluster-robust (%d clusters)", f$n_clusters) else ""))
+              if (.vcov_used(x) == "cluster") sprintf("; cluster-robust (%d clusters)", f$n_clusters) else ""))
   cat("\nImpact on the latent mean (latent SD per unit):\n")
   if (is.null(x$inference)) {
     print(round(x$stage2$alpha, digits))
@@ -80,7 +89,7 @@ summary.mnlfa_ic <- function(object, ...) {
   structure(list(call = object$call, data = object$data[c("N", "J", "K", "items", "covariates")],
                  form = object$control$form, units = .units(object), level = object$control$level,
                  fdr = object$control$fdr, convergence = object$stage1$convergence,
-                 vcov_type = object$stage1$vcov_type,
+                 vcov_type = .vcov_used(object),
                  impact = sel(inf$impact, cols), variance = .variance_table(object),
                  effects = sel(effects, cols), joint = inf$joint, category_impact = sel(inf$impact_by_category, cols),
                  flagged = flagged),

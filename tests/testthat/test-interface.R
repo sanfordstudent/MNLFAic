@@ -167,6 +167,21 @@ test_that("infer() reproduces the stored inference and changes settings", {
   expect_s3_class(infer(f0)$inference$impact, "data.frame")
 })
 
+test_that("print and summary label the covariance the inference used", {
+  d <- small_data()
+  cl <- rep(1:20, length.out = nrow(d$pd))
+  fc <- mnlfa_ic(d$resp, d$pd, ~ female, cluster = cl, control = ctl_fast())
+  fm <- infer(fc, vcov = "model")
+  expect_identical(fc$inference$settings$vcov_type, "cluster")
+  expect_identical(fm$inference$settings$vcov_type, "model")
+  expect_output(print(fc), "cluster-robust")
+  expect_output(print(summary(fc)), "cluster-robust")
+  expect_false(any(grepl("cluster-robust", capture.output(print(fm)))))
+  expect_false(any(grepl("cluster-robust", capture.output(print(summary(fm))))))
+  f0 <- mnlfa_ic(d$resp, d$pd, ~ female, cluster = cl, inference = FALSE, control = ctl_fast(vcov = "model"))
+  expect_false(any(grepl("cluster-robust", capture.output(print(f0)))))
+})
+
 test_that("simulate(): reproducible, keeps missing pattern and RNG stream", {
   d <- small_data(); r <- d$resp; r[1:5, 2] <- NA
   fit <- mnlfa_ic(r, d$pd, ~ female + age, d$items, ~ pos, control = ctl_fast())
