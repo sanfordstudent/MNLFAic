@@ -1,5 +1,4 @@
-# Stage 2: generalized minimal-L1 (ML1) transformation with item covariates
-# (ported from chen-item-cov-ext/R/stage2_ml1_itemcov.R).
+# Stage 2: generalized minimal-L1 (ML1) transformation with item covariates.
 #
 # For each person covariate c, a median (LAD) regression without intercept of
 # the anchored Stage-1 DIF estimates on the Stage-2 design:

@@ -1,4 +1,4 @@
-# Item-covariate design matrix W (ported from chen-item-cov-ext/R/item_design.R).
+# Item-covariate design matrix W.
 #
 # Coding conventions (part of the identifying assumption, not only of
 # interpretation):

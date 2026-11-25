@@ -1,5 +1,4 @@
-# Gauss-Hermite rule for weight exp(-z^2), computed in base R (replaces
-# fastGHQuad::gaussHermiteData in the research code).
+# Gauss-Hermite rule for weight exp(-z^2), computed in base R.
 #
 # Nodes: eigenvalues of the symmetric Jacobi matrix (Golub-Welsch), polished
 # by Newton steps on the orthonormal Hermite recurrence. Weights: the

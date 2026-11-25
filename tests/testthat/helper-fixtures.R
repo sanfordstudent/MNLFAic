@@ -1,6 +1,5 @@
-# Fixtures: outputs of the research code (chen-item-cov-ext/R/) on fixed
-# inputs, made by package/dev/make_fixtures.R in the project folder. The
-# equivalence tests compare the package against them.
+# Fixtures: outputs of a frozen reference implementation on fixed inputs.
+# The equivalence tests compare the package against them.
 fixture <- function(name) {
   path <- testthat::test_path("fixtures", paste0(name, ".rds"))
   if (!file.exists(path)) testthat::skip(paste("fixture not available:", name))

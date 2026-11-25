@@ -1,7 +1,4 @@
-# Stage 1 building blocks with adaptive Gauss-Hermite quadrature (ported from
-# chen-item-cov-ext/R/stage1_aq.R and the Theta-based parts of
-# R/stage1_fast.R; the fixed-quadrature engine and the original EM of Chen et
-# al. are not included).
+# Stage 1 building blocks with adaptive Gauss-Hermite quadrature.
 #
 # Model (anchored; item 1 = the anchor in the fitted order, its DIF fixed at 0):
 #   logit P(y_ij = 1 | theta) = a_j theta + b_j + x_i' g_j,

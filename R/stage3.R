@@ -1,5 +1,4 @@
-# Stage 3: bootstrap inference through the generalized ML1 step (ported from
-# chen-item-cov-ext/R/stage3_inference.R).
+# Stage 3: bootstrap inference through the generalized ML1 step.
 #
 # Chen et al.'s (2023) Algorithm 2, a parametric bootstrap, with Stage 2
 # replaced by .ml1_itemcov():

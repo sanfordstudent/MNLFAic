@@ -1,4 +1,4 @@
-# Data generation from the model (ported from chen-item-cov-ext/R/simulate.R).
+# Data generation from the model.
 #
 #   logit P(y_ij = 1 | theta_i) = lambda_j theta_i + nu0_j + sum_c nu_jc x_ci
 #   theta_i ~ N(x_i' alpha, exp(x_i' omega))

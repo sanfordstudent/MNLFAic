@@ -1,5 +1,4 @@
-# Compact storage of Stage-1 fits (ported from chen-item-cov-ext/R/fit_io.R),
-# so Stage 2/3 can be re-run without refitting. The information matrix is
+# Compact storage of Stage-1 fits, so Stage 2/3 can be re-run without refitting. The information matrix is
 # symmetric, so only its upper triangle is kept; for a cluster-robust fit the
 # G x D cluster score sums are kept and the sandwich is recomputed on restore.
 

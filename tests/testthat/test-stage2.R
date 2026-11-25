@@ -1,6 +1,5 @@
-# Stage 2 (generalized ML1). Ported from chen-item-cov-ext/tests/test_stage2.R
-# (sections 1, 3-5; logit metric pinned where the checks were written for it)
-# and tests/test_difficulty_metric.R (sections 1-3).
+# Stage 2 (generalized ML1); logit metric pinned where the checks were
+# written for it.
 
 flagged <- function(eps, tol = 1e-6) which(abs(eps) > tol)
 toy_pos <- function() .build_item_design(data.frame(

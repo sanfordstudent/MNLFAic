@@ -1,8 +1,5 @@
-# Stage 1 (adaptive quadrature, EM + Newton). Ported from
-# chen-item-cov-ext/tests/test_stage1_aq.R and test_stage1_newton.R on the
-# baseline data (N = 1000, J = 20, K = 3). The comparisons with the fixed-
-# quadrature engine are not ported (that engine is not in the package); the
-# fit is compared with Chen et al.'s original EM fit instead.
+# Stage 1 (adaptive quadrature, EM + Newton) on the baseline data (N = 1000,
+# J = 20, K = 3). The fit is compared with Chen et al.'s original EM fit.
 
 baseline <- function() {
   fx <- fixture("fixture_chen_baseline")

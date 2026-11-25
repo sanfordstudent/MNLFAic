@@ -1,10 +1,10 @@
-# Equivalence with the research code (chen-item-cov-ext/R/), via fixtures.
+# Equivalence with a frozen reference implementation, via fixtures.
 # Tolerances: deterministic steps (coding, Stage 2, Stage 3 given a fit,
 # diagnostics, simulator) must agree to rounding; Stage-1 fits differ only
-# through the Gauss-Hermite rule (base R here, fastGHQuad in the research
-# code; they agree to about 1e-14), so estimates agree to far below their SEs.
+# through the Gauss-Hermite rule (base R here, fastGHQuad in the reference
+# implementation; they agree to about 1e-14), so estimates agree to far below their SEs.
 
-test_that("simulator reproduces the research data exactly", {
+test_that("simulator reproduces the reference data exactly", {
   fx <- fixture("fixture_small")$input
   tr <- fx$truth
   sim <- .simulate_itemcov_data(fx$x, tr$lambda, tr$nu0, fx$design$W, tr$gamma, tr$eps, tr$alpha, tr$omega,
@@ -94,7 +94,7 @@ test_that("Stage 3 matches exactly given the same fit and seed", {
                logit = list(metric = "logit"))
   for (case in names(args)) {
     ref <- fx$stage3[[case]]
-    # the research code's default DIF interval shape was equal-tailed
+    # the reference implementation's default DIF interval shape was equal-tailed
     r <- do.call(.dif_inference_itemcov, c(list(f, W, des, M = 1000, seed = 11, ci_shape_dif = "equal"), args[[case]]))
     for (tab in c("residual", "total", "gamma", "category_effects", "joint", "impact", "impact_by_category"))
       if (!is.null(ref[[tab]])) expect_same_table(r[[tab]], ref[[tab]])
@@ -162,7 +162,7 @@ test_that("compact storage round-trips (model-based and cluster-robust)", {
   }
 })
 
-test_that("long test (J = 80, N = 1500) matches the research code", {
+test_that("long test (J = 80, N = 1500) matches the reference implementation", {
   skip_on_cran()
   fx <- fixture("fixture_long"); inp <- fx$input
   f <- .fit_stage1(inp$dat, inp$x, start_values(inp$dat, 2))

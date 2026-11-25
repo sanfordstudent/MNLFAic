@@ -1,4 +1,4 @@
-# Cluster-robust Stage-1 covariance. Ported from chen-item-cov-ext/tests/test_cluster.R.
+# Cluster-robust Stage-1 covariance.
 
 cluster_setup <- function(icc = 0.15) {
   set.seed(71)

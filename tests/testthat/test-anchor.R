@@ -1,4 +1,4 @@
-# Automatic Stage-1 anchor. Ported from chen-item-cov-ext/tests/test_anchor.R.
+# Automatic Stage-1 anchor.
 # The anchor is bookkeeping: the maximum likelihood, the anchor-invariant
 # parameters and their SEs, and every Stage-2 result must agree with an
 # anchor-1 fit whenever both reach the optimum.

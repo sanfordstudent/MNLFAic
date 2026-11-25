@@ -1,6 +1,4 @@
-# Stage-1 score and observed information (ported from score_stage1() in
-# chen-item-cov-ext/R/stage1_fit.R, info_fast() in R/stage1_fast.R and
-# stage1_person_scores() in R/stage1_fit.R). All take the quadrature nodes
+# Stage-1 score and observed information. All take the quadrature nodes
 # Theta (N x n) and posterior weights q (N x n) of the current E-step.
 # Packed layout: beta (K), eta (K), a (J), b (J), g_{2..J} row-major ((J-1) K).
 

@@ -1,6 +1,5 @@
-# Identification condition, tolerance table, design report. Ported from
-# chen-item-cov-ext/tests/test_stage2.R, sections 6-8 (logit metric pinned
-# where written for it).
+# Identification condition, tolerance table, design report (logit metric
+# pinned where written for it).
 
 toy_pos <- function() .build_item_design(data.frame(
   pos = factor(c(rep("noun", 10), rep("adj", 6), rep("verb", 4)), levels = c("noun", "adj", "verb"))),

@@ -1,5 +1,4 @@
-# Stage 3 (bootstrap inference). Ported from chen-item-cov-ext/tests/
-# test_stage3.R (sections 1-3) and test_difficulty_metric.R (sections 5-6).
+# Stage 3 (bootstrap inference).
 
 baseline_fit <- function() {
   fx <- fixture("fixture_chen_baseline")

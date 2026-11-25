@@ -1,5 +1,4 @@
-# Diagnostics for the generalized ML1 identification condition (ported from
-# chen-item-cov-ext/R/diagnostics.R).
+# Diagnostics for the generalized ML1 identification condition.
 #
 # The condition, for one person covariate: with S = items with residual DIF,
 # s_j their signs, and x_j item j's row of the Stage-2 design,

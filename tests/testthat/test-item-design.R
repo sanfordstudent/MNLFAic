@@ -1,4 +1,4 @@
-# Ported from chen-item-cov-ext/tests/test_stage2.R, section 2.
+# Item-covariate design matrix: coding and centering.
 
 items_toy <- function() data.frame(
   pos = factor(c(rep("noun", 10), rep("adj", 6), rep("verb", 4)), levels = c("noun", "adj", "verb")),

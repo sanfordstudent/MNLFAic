@@ -20,7 +20,7 @@ test_that("mnlfa_ic() reproduces the engine on the same data", {
   fit <- mnlfa_ic(inp$dat, pd, ~ female + age, it, ~ aoa + pos,
                   control = mnlfa_control(item_omit = list(pos = "noun"), M = 1000, seed = 11))
   ref <- fx$fit_auto
-  # point estimates match the research code
+  # point estimates match the reference implementation
   expect_equal(unname(fit$stage1$gamma.mat), unname(ref$gamma.mat), tolerance = 1e-6)
   expect_equal(unname(fit$coding$design$W), unname(inp$design$W), tolerance = 1e-14)
   expect_equal(fit$inference$impact$est, fx$stage3$threshold$impact$est, tolerance = 1e-6)

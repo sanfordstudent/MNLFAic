@@ -1,5 +1,4 @@
-# Stage 1: anchored maximum likelihood (ported from
-# chen-item-cov-ext/R/stage1_fit.R; adaptive quadrature only).
+# Stage 1: anchored maximum likelihood with adaptive quadrature.
 #
 # EM converges very slowly along the impact/DIF "slide", so its own stopping
 # rule stops far from the optimum. The fit therefore
