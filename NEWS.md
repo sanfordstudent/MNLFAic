@@ -1,5 +1,13 @@
 # MNLFAic (development version)
 
+* `confint(fit, "slopes")` gives Wald standard errors and intervals for the
+  item slopes, from the Stage-1 covariance (cluster-robust with `cluster =`).
+  Like the variance impact, the slopes are not changed by the identifying
+  step, so they do not need the bootstrap, and any `level` can be used.
+* `vcov()` now returns the covariance that the inference uses: the
+  model-based one after `infer(fit, vcov = "model")` on a clustered fit,
+  instead of always the cluster-robust one.
+
 * `print()` and `summary()` now label the covariance that the inference
   actually used. Previously, a fit with `cluster =` was labelled
   "cluster-robust" even after `infer(fit, vcov = "model")`, which reruns the

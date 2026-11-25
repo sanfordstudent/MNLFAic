@@ -6,7 +6,7 @@
 \usage{
 \method{confint}{mnlfa_ic}(
   object,
-  parm = c("mean", "variance", "effects", "residual", "total"),
+  parm = c("mean", "variance", "effects", "residual", "total", "slopes"),
   level = object$control$level,
   ...
 )
@@ -18,25 +18,34 @@
 \code{"variance"} (impact on the latent log-variance), \code{"effects"}
 (item-covariate effects on DIF, with implied categories), \code{"residual"} or
 \code{"total"} (residual and total DIF, one row per item and person
-covariate).}
+covariate), or \code{"slopes"} (baseline item slopes, one row per item).}
 
 \item{level}{Confidence level. The bootstrap intervals are computed when the
 model is fitted, at the level set by \code{mnlfa_control(level = )} (default
 0.95), so \code{level} must equal that value. For intervals at a different
 level, rerun the bootstrap with \code{infer(object, level = )}, which reuses the
-Stage-1 fit. The Wald intervals for \code{"variance"} can be computed at any
-level. As a result, \code{level} can only be changed here for \code{"variance"}.}
+Stage-1 fit. The Wald intervals for \code{"variance"} and \code{"slopes"} can be
+computed at any level. As a result, \code{level} can only be changed here for
+\code{"variance"} and \code{"slopes"}.}
 
 \item{...}{Unused.}
 }
 \value{
 A data frame with the covariate (and the term or item, where
 relevant), the estimate \code{est}, and the confidence limits \code{ci_low} and
-\code{ci_high}.
+\code{ci_high}. For \code{"slopes"}, also the standard error \code{se}.
 }
 \description{
 Confidence intervals from an \code{mnlfa_ic} fit, one type of parameter at a
 time.
+}
+\details{
+The variance impact and the slopes are not changed by the
+identifying (Stage-2) step, so their intervals are Wald intervals from the
+Stage-1 covariance rather than bootstrap intervals. With \verb{cluster =}, that
+covariance is cluster-robust and the intervals use a t distribution with
+G - 1 degrees of freedom (unless the inference was run with
+\code{vcov = "model"}). These two types do not need the bootstrap inference.
 }
 \examples{
 # Small example (a real analysis would use more persons, items and draws);
@@ -52,4 +61,5 @@ fit <- mnlfa_ic(sim$responses, sim$person_data, ~ el,
 confint(fit)                            # impact on the latent mean
 confint(fit, "effects")
 confint(fit, "variance", level = 0.9)   # Wald intervals, any level
+confint(fit, "slopes")                  # item slopes, with standard errors
 }

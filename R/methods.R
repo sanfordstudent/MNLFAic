@@ -18,17 +18,31 @@
   if (is.null(object$inference)) stop("No inference yet: run infer(object) or mnlfa_ic(..., inference = TRUE).", call. = FALSE)
 }
 
-# Variance impact (log-variance coefficients) with Wald intervals from Stage 1;
-# t with G - 1 df when the covariance is cluster-robust.
-.variance_table <- function(object, level = object$control$level) {
-  f <- object$stage1; K <- object$data$K
-  V <- if (identical(object$control$vcov, "model")) .stage1_vcov(f, "model") else f$vcov
-  se <- sqrt(diag(V)[(K + 1):(2 * K)])
-  cluster <- identical(f$vcov_type, "cluster") && !identical(object$control$vcov, "model")
+# Wald inference for Stage-1 parameters that Stage 2 leaves unchanged (variance
+# impact, slopes): estimate, SE, interval and p-value (H0: 0) from the Stage-1
+# covariance the inference uses; t with G - 1 df when it is cluster-robust.
+# idx indexes .stage1_index().
+.stage1_wald <- function(object, est, idx, level = object$control$level) {
+  f <- object$stage1
+  cluster <- .vcov_used(object) == "cluster"
+  V <- .stage1_vcov(f, if (cluster) "auto" else "model")
+  se <- sqrt(diag(V)[idx])
+  est <- unname(est)
   crit <- if (cluster) stats::qt(1 - (1 - level) / 2, f$n_clusters - 1) else stats::qnorm(1 - (1 - level) / 2)
-  p <- if (cluster) 2 * stats::pt(-abs(f$eta / se), f$n_clusters - 1) else 2 * stats::pnorm(-abs(f$eta / se))
-  data.frame(covariate = object$data$covariates, est = unname(f$eta), se = se,
-             ci_low = unname(f$eta) - crit * se, ci_high = unname(f$eta) + crit * se, p = p, row.names = NULL)
+  p <- if (cluster) 2 * stats::pt(-abs(est / se), f$n_clusters - 1) else 2 * stats::pnorm(-abs(est / se))
+  data.frame(est = est, se = se, ci_low = est - crit * se, ci_high = est + crit * se, p = p, row.names = NULL)
+}
+
+# Variance impact (log-variance coefficients) with Wald intervals from Stage 1.
+.variance_table <- function(object, level = object$control$level) {
+  ix <- .stage1_index(object$data$J, object$data$K)
+  cbind(covariate = object$data$covariates, .stage1_wald(object, object$stage1$eta, ix$eta, level))
+}
+
+# Item slopes with Wald intervals from Stage 1.
+.slope_table <- function(object, level = object$control$level) {
+  ix <- .stage1_index(object$data$J, object$data$K)
+  cbind(item = object$data$items, .stage1_wald(object, object$stage1$alpha.vec, ix$a, level))
 }
 
 #' @export
@@ -167,27 +181,36 @@ coef.mnlfa_ic <- function(object, type = c("mean", "variance", "effects", "resid
 #'   `"variance"` (impact on the latent log-variance), `"effects"`
 #'   (item-covariate effects on DIF, with implied categories), `"residual"` or
 #'   `"total"` (residual and total DIF, one row per item and person
-#'   covariate).
+#'   covariate), or `"slopes"` (baseline item slopes, one row per item).
 #' @param level Confidence level. The bootstrap intervals are computed when the
 #'   model is fitted, at the level set by `mnlfa_control(level = )` (default
 #'   0.95), so `level` must equal that value. For intervals at a different
 #'   level, rerun the bootstrap with `infer(object, level = )`, which reuses the
-#'   Stage-1 fit. The Wald intervals for `"variance"` can be computed at any
-#'   level. As a result, `level` can only be changed here for `"variance"`.
+#'   Stage-1 fit. The Wald intervals for `"variance"` and `"slopes"` can be
+#'   computed at any level. As a result, `level` can only be changed here for
+#'   `"variance"` and `"slopes"`.
 #' @param ... Unused.
+#' @details The variance impact and the slopes are not changed by the
+#'   identifying (Stage-2) step, so their intervals are Wald intervals from the
+#'   Stage-1 covariance rather than bootstrap intervals. With `cluster =`, that
+#'   covariance is cluster-robust and the intervals use a t distribution with
+#'   G - 1 degrees of freedom (unless the inference was run with
+#'   `vcov = "model"`). These two types do not need the bootstrap inference.
 #' @return A data frame with the covariate (and the term or item, where
 #'   relevant), the estimate `est`, and the confidence limits `ci_low` and
-#'   `ci_high`.
+#'   `ci_high`. For `"slopes"`, also the standard error `se`.
 #' @example man-roxygen/example-fit.R
 #' @examples
 #' confint(fit)                            # impact on the latent mean
 #' confint(fit, "effects")
 #' confint(fit, "variance", level = 0.9)   # Wald intervals, any level
+#' confint(fit, "slopes")                  # item slopes, with standard errors
 #' @export
-confint.mnlfa_ic <- function(object, parm = c("mean", "variance", "effects", "residual", "total"),
+confint.mnlfa_ic <- function(object, parm = c("mean", "variance", "effects", "residual", "total", "slopes"),
                              level = object$control$level, ...) {
   parm <- match.arg(parm)
   if (parm == "variance") return(.variance_table(object, level)[, c("covariate", "est", "ci_low", "ci_high")])
+  if (parm == "slopes") return(.slope_table(object, level)[, c("item", "est", "se", "ci_low", "ci_high")])
   .need_inference(object)
   if (!isTRUE(all.equal(level, object$control$level)))
     stop("The inference was run at level ", object$control$level, "; use infer(object, level = ", level, ").", call. = FALSE)
@@ -205,7 +228,7 @@ confint.mnlfa_ic <- function(object, parm = c("mean", "variance", "effects", "re
 #' @export
 vcov.mnlfa_ic <- function(object, ...) {
   f <- object$stage1; d <- object$data
-  V <- f$vcov
+  V <- .stage1_vcov(f, if (.vcov_used(object) == "cluster") "auto" else "model")
   others <- setdiff(seq_len(d$J), f$anchor)
   nm <- c(paste0("impact:", d$covariates), paste0("logvar:", d$covariates), paste0("slope:", d$items),
           paste0("intercept:", d$items),

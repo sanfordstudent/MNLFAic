@@ -182,6 +182,34 @@ test_that("print and summary label the covariance the inference used", {
   expect_false(any(grepl("cluster-robust", capture.output(print(f0)))))
 })
 
+test_that("confint(\"slopes\"): Wald intervals from the Stage-1 covariance in use", {
+  d <- small_data()
+  cl <- rep(1:20, length.out = nrow(d$pd))
+  f0 <- mnlfa_ic(d$resp, d$pd, ~ female, inference = FALSE, control = ctl_fast())
+  s0 <- confint(f0, "slopes")                          # no bootstrap needed
+  expect_named(s0, c("item", "est", "se", "ci_low", "ci_high"))
+  expect_identical(s0$item, colnames(d$resp))
+  expect_equal(s0$est, unname(coef(f0, "slopes")))
+  Vm <- solve(f0$stage1$info)
+  expect_equal(s0$se, sqrt(diag(Vm))[.stage1_index(ncol(d$resp), 1)$a], tolerance = 1e-8)
+  expect_equal(s0$ci_high - s0$est, stats::qnorm(.975) * s0$se)
+  s90 <- confint(f0, "slopes", level = 0.9)
+  expect_equal(s90$ci_high - s90$est, stats::qnorm(.95) * s90$se)
+
+  fc <- mnlfa_ic(d$resp, d$pd, ~ female, cluster = cl, inference = FALSE, control = ctl_fast())
+  sc <- confint(fc, "slopes")
+  ia <- .stage1_index(ncol(d$resp), 1)$a
+  expect_equal(sc$se, sqrt(diag(fc$stage1$vcov))[ia])
+  expect_equal(sc$ci_high - sc$est, stats::qt(.975, 19) * sc$se)
+  fcm <- infer(fc, vcov = "model")
+  sm <- confint(fcm, "slopes")                           # model-based covariance after infer()
+  expect_equal(sm$se, s0$se, tolerance = 1e-6)
+  expect_equal(sm$ci_high - sm$est, stats::qnorm(.975) * sm$se)
+  expect_equal(unname(vcov(fc)), unname(fc$stage1$vcov))  # vcov() follows the same rule
+  expect_equal(unname(vcov(fcm)), unname(.stage1_vcov(fc$stage1, "model")))
+  expect_equal(unname(sqrt(diag(vcov(fcm)))[ia]), sm$se)
+})
+
 test_that("simulate(): reproducible, keeps missing pattern and RNG stream", {
   d <- small_data(); r <- d$resp; r[1:5, 2] <- NA
   fit <- mnlfa_ic(r, d$pd, ~ female + age, d$items, ~ pos, control = ctl_fast())
