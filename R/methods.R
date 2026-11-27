@@ -18,6 +18,31 @@
   if (is.null(object$inference)) stop("No inference yet: run infer(object) or mnlfa_ic(..., inference = TRUE).", call. = FALSE)
 }
 
+# With a cluster-robust covariance: "sandwich" or "wild" (from the Stage-3
+# settings, else what infer() would use); NA otherwise.
+.cluster_method_used <- function(object) {
+  if (.vcov_used(object) != "cluster") return(NA_character_)
+  used <- object$inference$settings$cluster_method
+  if (!is.null(used)) return(used)
+  if (is.null(object$control$cluster_method)) "sandwich" else object$control$cluster_method
+}
+
+.is_wild <- function(object) identical(.cluster_method_used(object), "wild")
+
+# Short label of the clustered inference for print() and summary().
+.cluster_label <- function(object) {
+  switch(.cluster_method_used(object), sandwich = "cluster-robust", wild = "cluster-robust, wild cluster bootstrap", "")
+}
+
+# Variance-impact or slope table from the wild bootstrap draws.
+.wild_table <- function(object, which, level) {
+  .need_inference(object)
+  if (!isTRUE(all.equal(level, object$control$level)))
+    stop("With the wild cluster bootstrap, intervals are available only at the inference level (",
+         object$control$level, "); use infer(object, level = ", level, ").", call. = FALSE)
+  object$inference[[which]][, c("est", "se", "ci_low", "ci_high", "p")]
+}
+
 # Wald inference for Stage-1 parameters that Stage 2 leaves unchanged (variance
 # impact, slopes): estimate, SE, interval and p-value (H0: 0) from the Stage-1
 # covariance the inference uses; t with G - 1 df when it is cluster-robust.
@@ -33,16 +58,22 @@
   data.frame(est = est, se = se, ci_low = est - crit * se, ci_high = est + crit * se, p = p, row.names = NULL)
 }
 
-# Variance impact (log-variance coefficients) with Wald intervals from Stage 1.
+# Variance impact (log-variance coefficients) with Wald intervals from Stage 1
+# (bootstrap intervals with the wild cluster bootstrap).
 .variance_table <- function(object, level = object$control$level) {
   ix <- .stage1_index(object$data$J, object$data$K)
-  cbind(covariate = object$data$covariates, .stage1_wald(object, object$stage1$eta, ix$eta, level))
+  cbind(covariate = object$data$covariates,
+        if (.is_wild(object)) .wild_table(object, "variance", level) else
+          .stage1_wald(object, object$stage1$eta, ix$eta, level))
 }
 
-# Item slopes with Wald intervals from Stage 1.
+# Item slopes with Wald intervals from Stage 1 (bootstrap intervals with the
+# wild cluster bootstrap).
 .slope_table <- function(object, level = object$control$level) {
   ix <- .stage1_index(object$data$J, object$data$K)
-  cbind(item = object$data$items, .stage1_wald(object, object$stage1$alpha.vec, ix$a, level))
+  cbind(item = object$data$items,
+        if (.is_wild(object)) .wild_table(object, "slopes", level) else
+          .stage1_wald(object, object$stage1$alpha.vec, ix$a, level))
 }
 
 #' @export
@@ -55,7 +86,7 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
   cat(sprintf("  form: %s; Stage 1 %s (%d Newton steps, %d EM fallbacks)%s\n", x$control$form,
               if (f$convergence$converged) "converged" else "DID NOT CONVERGE",
               f$convergence$newton_iterations, f$convergence$em_fallbacks,
-              if (.vcov_used(x) == "cluster") sprintf("; cluster-robust (%d clusters)", f$n_clusters) else ""))
+              if (.vcov_used(x) == "cluster") sprintf("; %s (%d clusters)", .cluster_label(x), f$n_clusters) else ""))
   cat("\nImpact on the latent mean (latent SD per unit):\n")
   if (is.null(x$inference)) {
     print(round(x$stage2$alpha, digits))
@@ -103,7 +134,8 @@ summary.mnlfa_ic <- function(object, ...) {
   structure(list(call = object$call, data = object$data[c("N", "J", "K", "items", "covariates")],
                  form = object$control$form, units = .units(object), level = object$control$level,
                  fdr = object$control$fdr, convergence = object$stage1$convergence,
-                 vcov_type = .vcov_used(object),
+                 vcov_type = .vcov_used(object), cluster_method = .cluster_method_used(object),
+                 cluster_label = .cluster_label(object),
                  impact = sel(inf$impact, cols), variance = .variance_table(object),
                  effects = sel(effects, cols), joint = inf$joint, category_impact = sel(inf$impact_by_category, cols),
                  flagged = flagged),
@@ -115,10 +147,12 @@ print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
   rnd <- function(df) { if (is.null(df)) return(NULL); num <- vapply(df, is.numeric, logical(1)); df[num] <- lapply(df[num], round, digits); df }
   cat("MNLFA-IC: anchor-free DIF analysis\n")
   cat(sprintf("%d persons, %d items, %d person covariate(s); form: %s; %g%% intervals%s\n", x$data$N, x$data$J,
-              x$data$K, x$form, 100 * x$level, if (identical(x$vcov_type, "cluster")) "; cluster-robust" else ""))
+              x$data$K, x$form, 100 * x$level,
+              if (identical(x$vcov_type, "cluster")) paste0("; ", x$cluster_label) else ""))
   if (!x$convergence$converged) cat("WARNING: Stage 1 did not converge (", x$convergence$stop_reason, ").\n", sep = "")
   cat("\nImpact on the latent mean (latent SD per unit of the covariate):\n"); print(rnd(x$impact), row.names = FALSE)
-  cat("\nImpact on the latent log-variance (Wald):\n"); print(rnd(x$variance), row.names = FALSE)
+  cat(sprintf("\nImpact on the latent log-variance (%s):\n", if (identical(x$cluster_method, "wild")) "bootstrap" else "Wald"))
+  print(rnd(x$variance), row.names = FALSE)
   if (!is.null(x$effects)) {
     cat("\nItem-covariate effects on DIF (", x$units, "):\n", sep = ""); print(rnd(x$effects), row.names = FALSE)
   }
@@ -188,7 +222,7 @@ coef.mnlfa_ic <- function(object, type = c("mean", "variance", "effects", "resid
 #'   level, rerun the bootstrap with `infer(object, level = )`, which reuses the
 #'   Stage-1 fit. The Wald intervals for `"variance"` and `"slopes"` can be
 #'   computed at any level. As a result, `level` can only be changed here for
-#'   `"variance"` and `"slopes"`.
+#'   `"variance"` and `"slopes"`, and not with the wild cluster bootstrap.
 #' @param ... Unused.
 #' @details The variance impact and the slopes are not changed by the
 #'   identifying (Stage-2) step, so their intervals are Wald intervals from the
@@ -196,6 +230,10 @@ coef.mnlfa_ic <- function(object, type = c("mean", "variance", "effects", "resid
 #'   covariance is cluster-robust and the intervals use a t distribution with
 #'   G - 1 degrees of freedom (unless the inference was run with
 #'   `vcov = "model"`). These two types do not need the bootstrap inference.
+#'   The exception is the wild cluster bootstrap
+#'   (`mnlfa_control(cluster_method = "wild")`, experimental): then their
+#'   intervals also come from the bootstrap draws, so they need the inference
+#'   and are available only at its level.
 #' @return A data frame with the covariate (and the term or item, where
 #'   relevant), the estimate `est`, and the confidence limits `ci_low` and
 #'   `ci_high`. For `"slopes"`, also the standard error `se`.

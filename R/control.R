@@ -54,17 +54,34 @@
 #'   `cluster`, an experimental feature.
 #' @param cluster_t With a cluster-robust covariance, draw from a multivariate
 #'   t distribution with G - 1 degrees of freedom (default `TRUE`). Used only
-#'   with `cluster`, an experimental feature.
+#'   with `cluster`, an experimental feature, and `cluster_method = "sandwich"`.
+#' @param cluster_method How the bootstrap draws are made with a cluster-robust
+#'   covariance: `"sandwich"` (default; multivariate normal or, with
+#'   `cluster_t`, t draws from the cluster-robust covariance) or `"wild"` (score
+#'   wild cluster bootstrap; see Details). Used only with `cluster`, an
+#'   experimental feature.
 #' @param seed Optional seed for the bootstrap draws. The caller's random-number
 #'   stream is left unchanged. A seed reproduces results exactly on the same
 #'   machine; across platforms the multivariate normal draws can differ at the
-#'   level of bootstrap noise.
+#'   level of bootstrap noise (the wild cluster bootstrap draws do not).
 #' @param verbose Print progress messages.
 #'
 #' @details With item covariates, the difficulty and slope-intercept forms are
 #'   not reparameterizations of each other: a common effect of an item covariate
 #'   is a common shift in latent-SD units in one and a common shift in logits in
 #'   the other.
+#'
+#'   The score wild cluster bootstrap (`cluster_method = "wild"`, experimental)
+#'   makes each draw from the clusters' contributions to the Stage-1 score: the
+#'   cluster totals are multiplied by independent random weights with mean 0
+#'   and variance 1, summed, and converted to a shift of the Stage-1 parameters
+#'   with the model-based covariance, scaled by \eqn{\sqrt{G/(G-1)}}{sqrt(G/(G-1))}
+#'   so that the draws have the cluster-robust (CR1) covariance. The weights
+#'   are \eqn{\pm 1}{+-1} (Rademacher), or Webb's six-point weights when there
+#'   are too few clusters for `M` distinct Rademacher draws
+#'   (\eqn{2^G < M}{2^G < M}). The bootstrap is unrestricted and needs no
+#'   refits. With it, the intervals for the variance impact and the item slopes
+#'   also come from the draws, so every interval of a fit uses the same method.
 #'
 #' @return A list of class `mnlfa_control`.
 #' @examples
@@ -77,9 +94,11 @@ mnlfa_control <- function(form = c("difficulty", "slope-intercept"), item_omit =
                           M = 10000, n_pilot = 2000, center = c("threshold", "estimate", "null"),
                           threshold = "sqrt2loglogN", level = 0.95, fdr = 0.05,
                           ci_effects = c("symmetric", "equal"), ci_dif = c("symmetric", "equal"),
-                          vcov = c("auto", "model"), cluster_t = TRUE, seed = NULL, verbose = FALSE) {
+                          vcov = c("auto", "model"), cluster_t = TRUE, cluster_method = c("sandwich", "wild"),
+                          seed = NULL, verbose = FALSE) {
   form <- match.arg(form); center <- match.arg(center)
   ci_effects <- match.arg(ci_effects); ci_dif <- match.arg(ci_dif); vcov <- match.arg(vcov)
+  cluster_method <- match.arg(cluster_method)
   .check_count <- function(v, nm, min = 1) {
     if (!is.numeric(v) || length(v) != 1 || is.na(v) || v < min || v != round(v))
       stop("`", nm, "` must be a whole number >= ", min, ".", call. = FALSE)
@@ -112,7 +131,8 @@ mnlfa_control <- function(form = c("difficulty", "slope-intercept"), item_omit =
                  n_nodes = n_nodes, em_tol = em_tol, em_stall = em_stall, newton_tol = newton_tol,
                  max_newton = max_newton, max_fallback = max_fallback, fallback_em_iter = fallback_em_iter,
                  M = M, n_pilot = n_pilot, center = center, threshold = threshold, level = level, fdr = fdr,
-                 ci_effects = ci_effects, ci_dif = ci_dif, vcov = vcov, cluster_t = cluster_t, seed = seed,
+                 ci_effects = ci_effects, ci_dif = ci_dif, vcov = vcov, cluster_t = cluster_t,
+                 cluster_method = cluster_method, seed = seed,
                  verbose = verbose),
             class = "mnlfa_control")
 }

@@ -210,6 +210,39 @@ test_that("confint(\"slopes\"): Wald intervals from the Stage-1 covariance in us
   expect_equal(unname(sqrt(diag(vcov(fcm)))[ia]), sm$se)
 })
 
+test_that("wild cluster bootstrap: settings, infer(), labels, variance and slope tables", {
+  d <- small_data()
+  cl <- rep(1:20, length.out = nrow(d$pd))
+  expect_error(mnlfa_control(cluster_method = "cr2"))
+  expect_identical(mnlfa_control()$cluster_method, "sandwich")
+  fc <- mnlfa_ic(d$resp, d$pd, ~ female, cluster = cl, control = ctl_fast())
+  fw <- infer(fc, cluster_method = "wild")                 # no refit
+  expect_identical(fw$stage1, fc$stage1)
+  expect_identical(fw$inference$settings$cluster_method, "wild")
+  expect_identical(fc$inference$settings$cluster_method, "sandwich")
+  expect_output(print(fw), "wild cluster bootstrap \\(20 clusters\\)")
+  expect_false(any(grepl("wild", capture.output(print(fc)))))
+  out <- capture.output(print(summary(fw)))
+  expect_true(any(grepl("cluster-robust, wild cluster bootstrap", out)))
+  expect_true(any(grepl("log-variance \\(bootstrap\\)", out)))
+  expect_identical(summary(fw)$variance$se, fw$inference$variance$se)
+  sw <- confint(fw, "slopes")
+  expect_identical(sw$item, colnames(d$resp))
+  expect_identical(sw$se, fw$inference$slopes$se)
+  expect_identical(sw$ci_low, fw$inference$slopes$ci_low)
+  expect_error(confint(fw, "slopes", level = 0.9), "inference level")
+  expect_error(confint(fw, "variance", level = 0.9), "inference level")
+  expect_equal(unname(vcov(fw)), unname(fc$stage1$vcov))  # the CR1 covariance of the draws
+  fm <- infer(fw, vcov = "model")                         # model-based overrides the wild bootstrap
+  expect_false(any(grepl("wild|cluster-robust", capture.output(print(fm)))))
+  expect_equal(confint(fm, "slopes", level = 0.9)$ci_high - confint(fm, "slopes", level = 0.9)$est,
+               stats::qnorm(.95) * confint(fm, "slopes")$se)
+  f0 <- mnlfa_ic(d$resp, d$pd, ~ female, cluster = cl, inference = FALSE, control = ctl_fast(cluster_method = "wild"))
+  expect_output(print(f0), "wild cluster bootstrap")
+  expect_error(confint(f0, "slopes"), "No inference")
+  expect_identical(infer(f0)$inference$settings$cluster_method, "wild")
+})
+
 test_that("simulate(): reproducible, keeps missing pattern and RNG stream", {
   d <- small_data(); r <- d$resp; r[1:5, 2] <- NA
   fit <- mnlfa_ic(r, d$pd, ~ female + age, d$items, ~ pos, control = ctl_fast())

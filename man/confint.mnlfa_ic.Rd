@@ -26,7 +26,7 @@ model is fitted, at the level set by \code{mnlfa_control(level = )} (default
 level, rerun the bootstrap with \code{infer(object, level = )}, which reuses the
 Stage-1 fit. The Wald intervals for \code{"variance"} and \code{"slopes"} can be
 computed at any level. As a result, \code{level} can only be changed here for
-\code{"variance"} and \code{"slopes"}.}
+\code{"variance"} and \code{"slopes"}, and not with the wild cluster bootstrap.}
 
 \item{...}{Unused.}
 }
@@ -46,6 +46,10 @@ Stage-1 covariance rather than bootstrap intervals. With \verb{cluster =}, that
 covariance is cluster-robust and the intervals use a t distribution with
 G - 1 degrees of freedom (unless the inference was run with
 \code{vcov = "model"}). These two types do not need the bootstrap inference.
+The exception is the wild cluster bootstrap
+(\code{mnlfa_control(cluster_method = "wild")}, experimental): then their
+intervals also come from the bootstrap draws, so they need the inference
+and are available only at its level.
 }
 \examples{
 # Small example (a real analysis would use more persons, items and draws);

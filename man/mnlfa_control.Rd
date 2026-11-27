@@ -26,6 +26,7 @@ mnlfa_control(
   ci_dif = c("symmetric", "equal"),
   vcov = c("auto", "model"),
   cluster_t = TRUE,
+  cluster_method = c("sandwich", "wild"),
   seed = NULL,
   verbose = FALSE
 )
@@ -97,12 +98,18 @@ if a cluster was given, otherwise model-based) or \code{"model"}. Used only with
 
 \item{cluster_t}{With a cluster-robust covariance, draw from a multivariate
 t distribution with G - 1 degrees of freedom (default \code{TRUE}). Used only
-with \code{cluster}, an experimental feature.}
+with \code{cluster}, an experimental feature, and \code{cluster_method = "sandwich"}.}
+
+\item{cluster_method}{How the bootstrap draws are made with a cluster-robust
+covariance: \code{"sandwich"} (default; multivariate normal or, with
+\code{cluster_t}, t draws from the cluster-robust covariance) or \code{"wild"} (score
+wild cluster bootstrap; see Details). Used only with \code{cluster}, an
+experimental feature.}
 
 \item{seed}{Optional seed for the bootstrap draws. The caller's random-number
 stream is left unchanged. A seed reproduces results exactly on the same
 machine; across platforms the multivariate normal draws can differ at the
-level of bootstrap noise.}
+level of bootstrap noise (the wild cluster bootstrap draws do not).}
 
 \item{verbose}{Print progress messages.}
 }
@@ -119,6 +126,18 @@ With item covariates, the difficulty and slope-intercept forms are
 not reparameterizations of each other: a common effect of an item covariate
 is a common shift in latent-SD units in one and a common shift in logits in
 the other.
+
+The score wild cluster bootstrap (\code{cluster_method = "wild"}, experimental)
+makes each draw from the clusters' contributions to the Stage-1 score: the
+cluster totals are multiplied by independent random weights with mean 0
+and variance 1, summed, and converted to a shift of the Stage-1 parameters
+with the model-based covariance, scaled by \eqn{\sqrt{G/(G-1)}}{sqrt(G/(G-1))}
+so that the draws have the cluster-robust (CR1) covariance. The weights
+are \eqn{\pm 1}{+-1} (Rademacher), or Webb's six-point weights when there
+are too few clusters for \code{M} distinct Rademacher draws
+(\eqn{2^G < M}{2^G < M}). The bootstrap is unrestricted and needs no
+refits. With it, the intervals for the variance impact and the item slopes
+also come from the draws, so every interval of a fit uses the same method.
 }
 \examples{
 mnlfa_control(M = 2000, seed = 1)

@@ -51,7 +51,9 @@ to an arbitrary number of continuous or categorical person covariates.}
 
 \item{cluster}{Optional cluster identifier (vector with one value per
 person, or the name of a column of \code{person_data}). Adds a cluster-robust
-covariance for inference. This is currently an experimental feature.}
+covariance for inference, or, with
+\code{mnlfa_control(cluster_method = "wild")}, a score wild cluster bootstrap.
+This is currently an experimental feature.}
 
 \item{control}{Settings from \code{\link[=mnlfa_control]{mnlfa_control()}}.}
 

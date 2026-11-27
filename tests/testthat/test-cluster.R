@@ -79,3 +79,45 @@ test_that("clustered data: robust SEs grow for the cluster-level covariate; Stag
   expect_equal(s2$vcov, fc$vcov, tolerance = 1e-10)
   expect_warning(.fit_stage1(s$sim$dat, s$x, s$st(s$sim$dat), cluster = rep(1:10, length.out = s$N)), "clusters")
 })
+
+test_that("wild cluster bootstrap draws: CR1 covariance, weights, seed", {
+  set.seed(3)
+  G <- 4; D <- 6
+  Sg <- matrix(stats::rnorm(G * D), G, D)
+  A <- matrix(stats::rnorm(D * D), D, D); info <- crossprod(A) + diag(D)
+  signs <- as.matrix(expand.grid(rep(list(c(-1, 1)), G)))       # all 2^G Rademacher draws
+  Z <- .wild_cluster_draws(Sg, info, nrow(signs), weights = signs)
+  expect_equal(colMeans(Z), rep(0, D), tolerance = 1e-12)
+  expect_equal(crossprod(Z) / nrow(signs), .stage1_cluster_vcov(info, Sg), tolerance = 1e-12)
+  expect_identical(.wild_weight_type(13, 10000), "webb")
+  expect_identical(.wild_weight_type(14, 10000), "rademacher")
+  Zw <- .with_seed(1, .wild_cluster_draws(Sg, info, 20000))        # Webb weights (2^4 < M)
+  expect_lt(max(abs(stats::cov(Zw) / .stage1_cluster_vcov(info, Sg) - 1)[abs(.stage1_cluster_vcov(info, Sg)) > 0.1]), 0.1)
+  expect_identical(.with_seed(9, .wild_cluster_draws(Sg, info, 50)), .with_seed(9, .wild_cluster_draws(Sg, info, 50)))
+})
+
+test_that("Stage 3 with the wild cluster bootstrap", {
+  skip_on_cran()
+  s <- cluster_setup(); G <- s$G
+  fc <- .fit_stage1(s$sim$dat, s$x, s$st(s$sim$dat), cluster = s$cl)
+  ix <- .stage1_index(s$J, 2)
+  iw  <- .dif_inference_itemcov(fc, s$des$W, s$des, M = 2000, seed = 5, cluster_method = "wild")
+  iw2 <- .dif_inference_itemcov(fc, s$des$W, s$des, M = 2000, seed = 5, cluster_method = "wild")
+  icn <- .dif_inference_itemcov(fc, s$des$W, s$des, M = 2000, seed = 5, cluster_t = FALSE)
+  im  <- .dif_inference_itemcov(fc, s$des$W, s$des, M = 2000, seed = 5, vcov = "model", cluster_method = "wild")
+  im0 <- .dif_inference_itemcov(fc, s$des$W, s$des, M = 2000, seed = 5, vcov = "model")
+  st <- iw$settings
+  expect_true(st$vcov_type == "cluster" && st$cluster_method == "wild" && st$wild_weights == "rademacher" &&
+              is.na(st$draw_df) && st$n_clusters == G)
+  expect_identical(iw$residual, iw2$residual)
+  expect_identical(iw$impact, iw2$impact)
+  expect_lt(max(abs(iw$impact$se / icn$impact$se - 1)), 0.1)       # same covariance, different draws
+  expect_named(iw$variance, c("covariate", names(iw$impact)[-1]))
+  expect_equal(iw$variance$est, unname(fc$eta))
+  expect_equal(iw$slopes$est, unname(fc$alpha.vec))
+  expect_lt(max(abs(iw$variance$se / sqrt(diag(fc$vcov))[ix$eta] - 1)), 0.1)
+  expect_lt(stats::median(abs(iw$slopes$se / sqrt(diag(fc$vcov))[ix$a] - 1)), 0.1)
+  expect_true(is.null(icn$variance) && is.null(icn$slopes) && icn$settings$cluster_method == "sandwich")
+  expect_true(im$settings$vcov_type == "model" && is.na(im$settings$cluster_method) && is.null(im$variance))
+  expect_identical(im$residual, im0$residual)                       # vcov = "model" overrides
+})

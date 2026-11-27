@@ -125,7 +125,8 @@ ml1_inference <- function(fit, W = NULL, design = NULL, control = mnlfa_control(
                          center = control$center, M = control$M, sig = 1 - control$level, seed = control$seed,
                          threshold_z = control$threshold, n_pilot = min(control$n_pilot, control$M), fdr = control$fdr,
                          ci_shape_effects = control$ci_effects, ci_shape_dif = control$ci_dif,
-                         vcov = control$vcov, cluster_t = control$cluster_t)
+                         vcov = control$vcov, cluster_t = control$cluster_t,
+                         cluster_method = control$cluster_method)
 }
 
 #' @rdname stage-functions

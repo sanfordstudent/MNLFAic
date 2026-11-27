@@ -4,7 +4,9 @@
 # replaced by .ml1_itemcov():
 #   1. draw M perturbations Z_m of the anchored Stage-1 parameters from
 #      N(0, V), V = I^{-1} (or the cluster-robust covariance; then a
-#      multivariate t with G - 1 df by default);
+#      multivariate t with G - 1 df by default), or, with
+#      cluster_method = "wild", by the score wild cluster bootstrap
+#      (.wild_cluster_draws());
 #   2. apply Stage 2 to center + Z_m;
 #   3. e_m = G(center + Z_m) - G(center) for every output quantity G;
 #   4. intervals, p-values and SEs from the e_m.
@@ -71,6 +73,27 @@
   out
 }
 
+# Score wild cluster bootstrap draws (unrestricted, no refits):
+#   Z_m = sqrt(G / (G - 1)) * I^{-1} sum_g w_mg S_g,
+# with S_g the cluster sums of the per-person scores (G x D) and w_mg
+# independent weights with mean 0 and variance 1. Over the weights,
+# Cov(Z_m) is exactly the CR1 sandwich. Weights: Rademacher (+-1), or Webb's
+# six-point weights when 2^G < M (too few clusters for M distinct Rademacher
+# draws). `weights`: optional M x G weight matrix (for tests).
+.wild_weight_type <- function(G, M) if (2^G < M) "webb" else "rademacher"
+
+.wild_cluster_draws <- function(cluster_scores, info, M, weights = NULL) {
+  G <- nrow(cluster_scores)
+  if (is.null(weights)) {
+    vals <- switch(.wild_weight_type(G, M),
+                   rademacher = c(-1, 1),
+                   webb = c(-sqrt(3 / 2), -1, -sqrt(1 / 2), sqrt(1 / 2), 1, sqrt(3 / 2)))
+    weights <- matrix(vals[sample.int(length(vals), M * G, replace = TRUE)], M, G)
+  }
+  Vm <- solve(info); Vm <- (Vm + t(Vm)) / 2
+  sqrt(G / (G - 1)) * (weights %*% cluster_scores) %*% Vm
+}
+
 # Threshold (in bootstrap SEs) for threshold centering: a number, or a rule.
 #   "sqrt2loglogN": sqrt(2 log log N)  (default; grows with N as the Fang-Santos
 #                   rate conditions require; ~2.0 at N = 1190)
@@ -96,6 +119,10 @@
 # vcov      : "auto" (fit$vcov when the fit is cluster-robust, else I^{-1}) or
 #             "model" (always I^{-1})
 # cluster_t : with a cluster-robust vcov, multivariate t draws with G - 1 df
+# cluster_method : with a cluster-robust vcov, "sandwich" (multivariate normal
+#             or t draws from the CR1 sandwich) or "wild" (score wild cluster
+#             bootstrap; then the variance impact and slopes also get bootstrap
+#             tables, $variance and $slopes)
 # fdr       : Benjamini-Hochberg level for flagging residual DIF (all J x C tests)
 # ci_shape_effects : interval shape for impact and item-covariate effects
 # ci_shape_dif     : interval shape for residual and total DIF
@@ -107,8 +134,9 @@
                                    ci_shape_effects = c("symmetric", "equal"),
                                    ci_shape_dif = c("symmetric", "equal"),
                                    N = NULL, keep_draws = FALSE, vcov = c("auto", "model"),
-                                   cluster_t = TRUE) {
+                                   cluster_t = TRUE, cluster_method = c("sandwich", "wild")) {
   vcov <- match.arg(vcov)
+  cluster_method <- match.arg(cluster_method)
   metric <- match.arg(metric)
   center <- match.arg(center)
   ci_shape_effects <- match.arg(ci_shape_effects)
@@ -122,12 +150,16 @@
   use_cluster <- vcov == "auto" && identical(fit$vcov_type, "cluster")
   varian <- if (use_cluster) fit$vcov else solve(fit$info)
   vcov_type <- if (use_cluster) "cluster" else "model"
+  wild <- use_cluster && cluster_method == "wild"
+  if (wild && is.null(fit$cluster_scores)) stop("The fit has no cluster score sums for the wild bootstrap.", call. = FALSE)
   est <- .ml1_itemcov(fit$gamma.mat, fit$alpha.vec, fit$beta, W, metric)
 
   draw_df <- NA
   noise <- .with_seed(seed, {
-    nz <- MASS::mvrnorm(n = M, mu = rep(0, nrow(varian)), Sigma = varian)
-    if (use_cluster && cluster_t) {              # multivariate t, G - 1 df (after the normals)
+    # (the expression is evaluated in this function's frame: no return() here)
+    nz <- if (wild) .wild_cluster_draws(fit$cluster_scores, fit$info, M) else
+      MASS::mvrnorm(n = M, mu = rep(0, nrow(varian)), Sigma = varian)
+    if (use_cluster && cluster_t && !wild) {              # multivariate t, G - 1 df (after the normals)
       draw_df <- fit$n_clusters - 1
       nz <- nz / sqrt(stats::rchisq(M, draw_df) / draw_df)
     }
@@ -248,8 +280,19 @@
     }
   }
 
+  # Wild bootstrap: the variance impact and slopes (not changed by Stage 2)
+  # also from the draws, so a fit uses one method throughout.
+  variance <- slopes <- NULL
+  if (wild) {
+    ix <- .stage1_index(J, K)
+    variance <- cbind(data.frame(covariate = cov_names),
+                      .summarise_draws(unname(fit$eta), noise[, ix$eta, drop = FALSE], sig, "paper", ci_shape_effects))
+    slopes <- cbind(data.frame(item = seq_len(J)),
+                    .summarise_draws(unname(fit$alpha.vec), noise[, ix$a, drop = FALSE], sig, "paper", ci_shape_effects))
+  }
+
   out <- list(
-    residual = residual, total = total, gamma = gamma,
+    residual = residual, total = total, gamma = gamma, variance = variance, slopes = slopes,
     category_effects = category_effects, joint = joint, impact = impact,
     impact_by_category = impact_by_category, point = est,
     # cells the threshold centering kept off the fitted plane (J x K logical;
@@ -261,6 +304,8 @@
                     ci_shape_effects = ci_shape_effects, ci_shape_dif = ci_shape_dif,
                     n_residuals_zeroed = n_zeroed, fdr = fdr,
                     nonunique_rate = d$nonunique_rate, vcov_type = vcov_type, draw_df = draw_df,
+                    cluster_method = if (use_cluster) cluster_method else NA,
+                    wild_weights = if (wild) .wild_weight_type(fit$n_clusters, M) else NA,
                     n_clusters = if (vcov_type == "cluster") fit$n_clusters else NA))
   if (keep_draws) out$draws <- list(e_eps = e_eps, e_nu = e_nu, e_gamma = e_gamma,
                                     e_alpha = e_alpha, noise = noise)

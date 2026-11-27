@@ -43,7 +43,9 @@
 #'   to an arbitrary number of continuous or categorical person covariates.
 #' @param cluster Optional cluster identifier (vector with one value per
 #'   person, or the name of a column of `person_data`). Adds a cluster-robust
-#'   covariance for inference. This is currently an experimental feature.
+#'   covariance for inference, or, with
+#'   `mnlfa_control(cluster_method = "wild")`, a score wild cluster bootstrap.
+#'   This is currently an experimental feature.
 #' @param control Settings from [mnlfa_control()].
 #' @param inference Run the bootstrap inference (Stage 3). If `FALSE`, only
 #'   point estimates are computed; use [infer()] later.
@@ -114,7 +116,8 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
     object$stage1, W = .W_of(object), design = object$coding$design, metric = .form_metric(ctl$form),
     center = ctl$center, M = ctl$M, sig = 1 - ctl$level, seed = ctl$seed, threshold_z = ctl$threshold,
     n_pilot = min(ctl$n_pilot, ctl$M), fdr = ctl$fdr, ci_shape_effects = ctl$ci_effects,
-    ci_shape_dif = ctl$ci_dif, N = object$data$N, vcov = ctl$vcov, cluster_t = ctl$cluster_t)
+    ci_shape_dif = ctl$ci_dif, N = object$data$N, vcov = ctl$vcov, cluster_t = ctl$cluster_t,
+    cluster_method = ctl$cluster_method)
   object$timing["stage3"] <- unname(proc.time()[3] - t0)
   object
 }
