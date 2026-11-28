@@ -13,6 +13,33 @@
 # Newton resumes, at most max_fallback times; after that the fit is returned
 # with converged = FALSE and a warning.
 
+# Item types. A 1PL item shares one slope with the other 1PL items: a linear
+# restriction theta = T phi of the 2PL parameters, with T a 0/1 matrix copying
+# the common slope to every 1PL item. Score and information of phi are T's and
+# T'IT, so the 2PL score and Louis information are reused unchanged; the
+# model-based covariance of theta is T (T'IT)^{-1} T' (.inv_info()). T = NULL
+# when every item is 2PL (the unrestricted code path, unchanged).
+.restriction_matrix <- function(J, K, onepl) {
+  if (is.null(onepl) || !any(onepl)) return(NULL)
+  D <- 2 * K + 2 * J + (J - 1) * K
+  col <- seq_len(D)
+  s1 <- 2 * K + which(onepl)
+  col[s1] <- s1[1]
+  keep <- sort(unique(col))
+  Tm <- matrix(0, D, length(keep))
+  Tm[cbind(seq_len(D), match(col, keep))] <- 1
+  Tm
+}
+
+# T of a fit (original item order).
+.fit_T <- function(fit) .restriction_matrix(length(fit$alpha.vec), ncol(as.matrix(fit$gamma.mat)), fit$onepl)
+
+# Model-based covariance from the information: I^{-1}, or T (T'IT)^{-1} T'.
+.inv_info <- function(info, Tm = NULL) {
+  if (is.null(Tm)) return(solve(info))
+  Tm %*% solve(crossprod(Tm, info %*% Tm), t(Tm))
+}
+
 .pack_stage1 <- function(beta, eta, a, b, g) c(beta, eta, a, b, as.vector(t(g[-1, , drop = FALSE])))
 
 .unpack_stage1 <- function(p, J, K) {
@@ -27,18 +54,22 @@
 # start : list(a, b, g, beta, eta) (g: J x K, row 1 = 0)
 # w     : optional sampling weights (one per person); the fit maximizes the
 #         weighted (pseudo-) log-likelihood
+# onepl : optional logical (one per item, fitted order): 1PL items, which share
+#         one slope
 # Returns the estimates (beta, eta, alpha.vec = slopes, beta.vec = intercepts,
 # gamma.mat = J x K DIF), post (N x n posterior weights), nodes (N x n), info
 # (observed information, anchor removed), loglik, convergence.
 .fit_stage1_anchor1 <- function(dat, x, start, em_tol = 0.005, em_stall = 0.5, newton_tol = 1e-4,
                                 max_newton = 25, n_nodes = 21, max_fallback = 3,
-                                fallback_em_iter = 50, verbose = FALSE, w = NULL) {
+                                fallback_em_iter = 50, verbose = FALSE, w = NULL, onepl = NULL) {
   t_start <- proc.time()[3]
   J <- ncol(dat); K <- ncol(x)
   start_g <- if (is.null(dim(start$g))) matrix(start$g, J, K) else start$g
+  Tm <- .restriction_matrix(J, K, onepl)
+  if (!is.null(Tm)) start$a[onepl] <- mean(start$a[onepl])        # start on the restriction
 
   em <- .em_aq(start$a, start$b, start_g, x, dat, start$beta, start$eta, n_nodes = n_nodes,
-               tol = em_tol, stall_ratio = em_stall, verbose = verbose, w = w)
+               tol = em_tol, stall_ratio = em_stall, verbose = verbose, w = w, onepl = onepl)
   em_iter <- em$iterations
   last_mode <- em$mode
   e_step <- function(u) {
@@ -50,7 +81,7 @@
   if (verbose) message(sprintf("EM: %d iterations, %.0f s", em_iter, proc.time()[3] - t_start))
 
   em_more <- function(u) .em_aq(u$a, u$b, u$g, x, dat, u$beta, u$eta, n_nodes = n_nodes,
-                                tol = em_tol / 10, max_iter = fallback_em_iter, w = w)
+                                tol = em_tol / 10, max_iter = fallback_em_iter, w = w, onepl = onepl)
   can_fallback <- function() n_fallback < max_fallback
   fallback <- function(reason, it) {
     n_fallback <<- n_fallback + 1
@@ -77,10 +108,12 @@
     for (it in seq_len(max_newton)) {
       score <- .score_stage1(u$a, u$b, u$g, x, dat, u$beta, u$eta, es$q, es$Theta, w = w)
       info  <- info_at(u, es)
-      step  <- tryCatch(solve(info, score), error = function(e) NULL)
+      step  <- tryCatch(if (is.null(Tm)) solve(info, score) else
+                          as.vector(Tm %*% solve(crossprod(Tm, info %*% Tm), crossprod(Tm, score))),
+                        error = function(e) NULL)
       failed <- if (is.null(step)) "singular information" else NA_character_
       if (is.na(failed)) {
-        se <- sqrt(pmax(diag(solve(info)), .Machine$double.eps))
+        se <- sqrt(pmax(diag(.inv_info(info, Tm)), .Machine$double.eps))
         # Step halving: never accept a real decrease in log-likelihood. The
         # tolerance allows for quadrature noise (the person-specific nodes move
         # with beta/eta); at convergence it is far below 1e-6.
@@ -114,6 +147,7 @@
   info  <- info_at(u, es)
   info  <- (info + t(info)) / 2           # exactly symmetric
   score <- .score_stage1(u$a, u$b, u$g, x, dat, u$beta, u$eta, es$q, es$Theta, w = w)
+  if (!is.null(Tm)) score <- as.vector(crossprod(Tm, score))        # restricted score
   list(beta = u$beta, eta = u$eta, alpha.vec = u$a, beta.vec = u$b, gamma.mat = u$g,
        post = es$q, nodes = es$Theta, info = info, loglik = ll,
        convergence = list(converged = converged, stop_reason = stop_reason, em_fallbacks = n_fallback,
@@ -169,6 +203,8 @@
 #            same way; not with `cluster`). Adds the replicate-weight
 #            covariance by one-step linearization (.replicate_contributions());
 #            replicate_method and fay set its constant (.set_replicate_vcov()).
+#   onepl  : optional logical, one per item (original order): 1PL items, which
+#            share one slope (see .restriction_matrix()). Stored in the fit.
 # Items are reordered so the anchor comes first, fitted, and every output is
 # mapped back: alpha.vec, beta.vec, gamma.mat (row `anchor` is the fixed 0);
 # info (and vcov) laid out as beta (K), eta (K), a (J), b (J), then the DIF of
@@ -176,8 +212,10 @@
 # vcov_type ("model"/"cluster"), and with a cluster n_clusters and
 # cluster_scores (G x D).
 .fit_stage1 <- function(dat, x, start, anchor = "auto", cluster = NULL, weights = NULL, replicates = NULL,
-                        replicate_method = "JK2", fay = 0.5, ...) {
+                        replicate_method = "JK2", fay = 0.5, onepl = NULL, ...) {
   J <- ncol(dat); K <- ncol(x)
+  if (!is.null(onepl) && (length(onepl) != J || anyNA(onepl))) stop("`onepl` must have one value per item.", call. = FALSE)
+  if (!is.null(onepl) && !any(onepl)) onepl <- NULL
   if (!is.null(weights) && (length(weights) != nrow(dat) || anyNA(weights) || any(weights < 0)))
     stop("`weights` must have one non-negative, non-missing value per person.", call. = FALSE)
   if (!is.null(replicates)) {
@@ -196,13 +234,13 @@
   ord <- c(a, setdiff(seq_len(J), a)); inv <- order(ord)        # original item j sits at position inv[j]
   dat_o <- dat[, ord, drop = FALSE]
   if (a == 1L) {
-    fit <- .fit_stage1_anchor1(dat, x, start, w = weights, ...)
+    fit <- .fit_stage1_anchor1(dat, x, start, w = weights, onepl = onepl, ...)
     P <- seq_len(nrow(fit$info))
   } else {
     g <- if (is.null(dim(start$g))) matrix(start$g, J, K) else start$g
     st <- start; st$a <- start$a[ord]; st$b <- start$b[ord]
     st$g <- g[ord, , drop = FALSE]; st$g[1, ] <- 0
-    fit <- .fit_stage1_anchor1(dat_o, x, st, w = weights, ...)
+    fit <- .fit_stage1_anchor1(dat_o, x, st, w = weights, onepl = onepl[ord], ...)
     ix_a <- 2 * K + seq_len(J); ix_b <- 2 * K + J + seq_len(J)
     g_pos <- function(r) 2 * K + 2 * J + (r - 2) * K + seq_len(K)   # DIF block of reordered item r >= 2
     P <- c(seq_len(2 * K), ix_a[inv], ix_b[inv],
@@ -217,8 +255,9 @@
     fit$info <- fit$info[P, P]
   }
   fit$anchor <- a
+  fit$onepl <- onepl
   if (!is.null(replicates)) {
-    fit$replicate <- .replicate_contributions(S[, P, drop = FALSE], replicates - weights, fit$info)
+    fit$replicate <- .replicate_contributions(S[, P, drop = FALSE], replicates - weights, fit$info, .fit_T(fit))
     return(.set_replicate_vcov(fit, replicate_method, fay))
   }
   .add_stage1_vcov(fit, if (is.null(S)) NULL else S[, P, drop = FALSE], cluster)
@@ -226,7 +265,8 @@
 
 # Attach vcov (and, with a cluster, the CR1 sandwich ingredients) to a fit.
 .add_stage1_vcov <- function(fit, S = NULL, cluster = NULL) {
-  Vm <- solve(fit$info); Vm <- (Vm + t(Vm)) / 2
+  Tm <- .fit_T(fit)
+  Vm <- .inv_info(fit$info, Tm); Vm <- (Vm + t(Vm)) / 2
   if (is.null(cluster)) {
     fit$vcov <- Vm; fit$vcov_type <- "model"
     return(fit)
@@ -237,7 +277,7 @@
   fit$cluster_scores <- Sg
   fit$n_clusters <- G
   fit$t_df <- G - 1
-  fit$vcov <- .stage1_cluster_vcov(fit$info, Sg)
+  fit$vcov <- .stage1_cluster_vcov(fit$info, Sg, Tm)
   fit$vcov_type <- "cluster"
   fit
 }
@@ -254,9 +294,9 @@
 # S: N x D unweighted per-person scores; delta: N x R; info: the weighted
 # information. Returns B (rows sqrt(multiplicity) d_r, so V = c B'B),
 # n_replicates (R), n_units (rows of B) and n_paired.
-.replicate_contributions <- function(S, delta, info) {
+.replicate_contributions <- function(S, delta, info, Tm = NULL) {
   R <- ncol(delta)
-  Vm <- solve(info); Vm <- (Vm + t(Vm)) / 2
+  Vm <- .inv_info(info, Tm); Vm <- (Vm + t(Vm)) / 2
   d <- t(Vm %*% crossprod(S, delta))
   nrm <- sqrt(colSums(delta^2))
   C <- crossprod(delta)
@@ -292,9 +332,9 @@
 }
 
 # CR1 sandwich from the information and the cluster score sums.
-.stage1_cluster_vcov <- function(info, cluster_scores) {
+.stage1_cluster_vcov <- function(info, cluster_scores, Tm = NULL) {
   G <- nrow(cluster_scores)
-  Vm <- solve(info)
+  Vm <- .inv_info(info, Tm)
   V  <- Vm %*% (G / (G - 1) * crossprod(cluster_scores)) %*% Vm
   (V + t(V)) / 2
 }
@@ -303,6 +343,6 @@
 # type = "model" forces I^{-1}.
 .stage1_vcov <- function(fit, type = c("auto", "model")) {
   type <- match.arg(type)
-  if (type == "model" || is.null(fit$vcov)) { V <- solve(fit$info); return((V + t(V)) / 2) }
+  if (type == "model" || is.null(fit$vcov)) { V <- .inv_info(fit$info, .fit_T(fit)); return((V + t(V)) / 2) }
   fit$vcov
 }

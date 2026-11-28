@@ -1,5 +1,13 @@
 # MNLFAic (development version)
 
+* New `itemtype` argument of `mnlfa_ic()` (and `mnlfa_fit()`): `"2PL"`
+  (default), `"1PL"` (one slope shared by all items and estimated; the latent
+  metric is unchanged), or one entry per item, in which case the 1PL items
+  share one slope. The 1PL is fitted as a linear restriction of the 2PL, so
+  its score and information follow from the 2PL ones; standard errors, the
+  cluster-robust and replicate covariances and the wild bootstrap all work
+  with it.
+
 * Experimental: sampling weights and replicate-weight variance, for
   international assessments such as TIMSS, PIRLS and PISA. New arguments of
   `mnlfa_ic()`: `weights`, `weight_by` (groups, usually countries, within

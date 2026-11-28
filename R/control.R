@@ -8,7 +8,8 @@
 #'   item-covariate effects are shifts in item difficulty in latent-SD units,
 #'   positive = harder) or `"slope-intercept"` (shifts in the logit intercept,
 #'   positive = easier). With item covariates the two define different models
-#'   (see Details).
+#'   (see Details), except when every item is 1PL (`itemtype = "1PL"` in
+#'   [mnlfa_ic()]): then they differ only by the common slope.
 #' @param item_omit Named list giving, for categorical item covariates, the
 #'   level whose effect is implied (effect coding), e.g.
 #'   `list(domain = "number")`. Default: the first level. The choice changes

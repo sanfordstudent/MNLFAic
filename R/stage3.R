@@ -90,10 +90,10 @@
   matrix(vals[sample.int(length(vals), M * G, replace = TRUE)], M, G)
 }
 
-.wild_cluster_draws <- function(cluster_scores, info, M, weights = NULL) {
+.wild_cluster_draws <- function(cluster_scores, info, M, weights = NULL, Tm = NULL) {
   G <- nrow(cluster_scores)
   if (is.null(weights)) weights <- .wild_weights(M, G)
-  Vm <- solve(info); Vm <- (Vm + t(Vm)) / 2
+  Vm <- .inv_info(info, Tm); Vm <- (Vm + t(Vm)) / 2
   sqrt(G / (G - 1)) * (weights %*% cluster_scores) %*% Vm
 }
 
@@ -162,7 +162,7 @@
   # design-based covariance: "cluster" (CR1) or "replicate" (replicate weights)
   design_type <- if (is.null(fit$vcov_type)) "model" else fit$vcov_type
   use_cluster <- vcov == "auto" && design_type %in% c("cluster", "replicate")
-  varian <- if (use_cluster) fit$vcov else solve(fit$info)
+  varian <- if (use_cluster) fit$vcov else .inv_info(fit$info, .fit_T(fit))
   vcov_type <- if (use_cluster) design_type else "model"
   wild <- use_cluster && cluster_method == "wild"
   if (wild && vcov_type == "cluster" && is.null(fit$cluster_scores))
@@ -174,7 +174,7 @@
   draw_df <- NA
   noise <- .with_seed(seed, {
     # (the expression is evaluated in this function's frame: no return() here)
-    nz <- if (wild && vcov_type == "cluster") .wild_cluster_draws(fit$cluster_scores, fit$info, M) else
+    nz <- if (wild && vcov_type == "cluster") .wild_cluster_draws(fit$cluster_scores, fit$info, M, Tm = .fit_T(fit)) else
       if (wild) .wild_replicate_draws(fit$replicate$B, fit$rep_scale, M) else
       MASS::mvrnorm(n = M, mu = rep(0, nrow(varian)), Sigma = varian)
     if (use_cluster && cluster_t && !wild) {              # multivariate t (after the normals)

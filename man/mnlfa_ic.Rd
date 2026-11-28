@@ -10,6 +10,7 @@ mnlfa_ic(
   person,
   item_data = NULL,
   item = NULL,
+  itemtype = "2PL",
   cluster = NULL,
   weights = NULL,
   weight_by = NULL,
@@ -51,6 +52,14 @@ the formula; interaction terms should be created manually as columns of
 \code{item_data}. \code{NULL} (default): no item
 covariates; the analysis is then Chen et al.'s anchor-free method extended
 to an arbitrary number of continuous or categorical person covariates.}
+
+\item{itemtype}{Item response model: \code{"2PL"} (default; every item has its
+own slope) or \code{"1PL"} (one slope shared by all items and estimated, so
+the latent metric is unchanged), or a vector with one entry per item, in
+the order of the columns of \code{responses} or named by item, in which case
+all \code{"1PL"} items share one slope and the \code{"2PL"} items have their own.
+With only 1PL items, the difficulty and slope-intercept forms (see
+\code{\link[=mnlfa_control]{mnlfa_control()}}) differ only by the common slope.}
 
 \item{cluster}{Optional cluster identifier (vector with one value per
 person, or the name of a column of \code{person_data}). Adds a cluster-robust

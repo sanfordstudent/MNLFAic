@@ -150,6 +150,23 @@
   out
 }
 
+# Item types: "2PL" or "1PL" for all items, or one per item (in column order,
+# or named by item). Returns a logical vector (TRUE = 1PL), or NULL if all 2PL.
+.prepare_itemtype <- function(itemtype, items) {
+  if (is.null(itemtype)) return(NULL)
+  if (!is.character(itemtype) || !all(itemtype %in% c("1PL", "2PL")))
+    stop("`itemtype` must be \"1PL\" or \"2PL\", for all items or one per item.", call. = FALSE)
+  J <- length(items)
+  if (length(itemtype) == 1) itemtype <- rep(itemtype, J)
+  if (length(itemtype) != J) stop("`itemtype` must have length 1 or one entry per item (", J, ").", call. = FALSE)
+  if (!is.null(names(itemtype))) {
+    if (!setequal(names(itemtype), items)) stop("The names of `itemtype` must be the item names.", call. = FALSE)
+    itemtype <- itemtype[items]
+  }
+  onepl <- unname(itemtype == "1PL")
+  if (any(onepl)) onepl else NULL
+}
+
 .prepare_cluster <- function(cluster, person_data) {
   if (is.null(cluster)) return(NULL)
   if (is.character(cluster) && length(cluster) == 1 && cluster %in% names(person_data)) return(person_data[[cluster]])

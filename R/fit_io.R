@@ -9,7 +9,7 @@
          info_upper = info[upper.tri(info, diag = TRUE)], D = nrow(info),
          N = if (!is.null(fit$post)) nrow(fit$post) else fit$N,
          loglik = fit$loglik, convergence = fit$convergence,
-         anchor = if (!is.null(fit$anchor)) fit$anchor else 1L,
+         anchor = if (!is.null(fit$anchor)) fit$anchor else 1L, onepl = fit$onepl,
          vcov_type = if (!is.null(fit$vcov_type)) fit$vcov_type else "model",
          cluster_scores = fit$cluster_scores, n_clusters = fit$n_clusters, t_df = fit$t_df,
          replicate = fit$replicate, rep_method = fit$rep_method, rep_fay = fit$rep_fay), extra)
@@ -23,9 +23,9 @@
   if (identical(s$vcov_type, "replicate")) {
     s <- .set_replicate_vcov(s, s$rep_method, s$rep_fay)
   } else if (identical(s$vcov_type, "cluster")) {
-    s$vcov <- .stage1_cluster_vcov(s$info, s$cluster_scores)
+    s$vcov <- .stage1_cluster_vcov(s$info, s$cluster_scores, .fit_T(s))
   } else {
-    Vm <- solve(s$info); s$vcov <- (Vm + t(Vm)) / 2; s$vcov_type <- "model"
+    Vm <- .inv_info(s$info, .fit_T(s)); s$vcov <- (Vm + t(Vm)) / 2; s$vcov_type <- "model"
   }
   s
 }

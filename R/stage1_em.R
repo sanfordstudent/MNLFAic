@@ -76,9 +76,14 @@
 # Item M-step: `n_newton` Newton steps on each item's expected complete-data
 # log-likelihood, all items at once, with per-item step halving so that no
 # item's objective decreases. Item 1 (the anchor) has g fixed at 0.
-.mstep_items <- function(a, b, g, x, dat, q, Theta, n_newton = 2, w = NULL) {
+# With 1PL items (onepl), their intercepts and DIF take per-item Newton steps
+# with the slope held fixed, and their common slope one Newton step from the
+# gradient and curvature summed over them; the 1PL items share one step
+# fraction, halved until their total objective does not decrease.
+.mstep_items <- function(a, b, g, x, dat, q, Theta, n_newton = 2, w = NULL, onepl = NULL) {
   N <- nrow(dat); J <- ncol(dat); K <- ncol(x); m <- 2 + K
   if (!is.null(w)) q <- w * q                # weighted posterior counts
+  one <- !is.null(onepl) && any(onepl)
   obs <- !is.na(dat); y0 <- ifelse(obs, dat, 0)
   pairs <- which(upper.tri(diag(m), diag = TRUE), arr.ind = TRUE)   # (u, v), u <= v
   Qold  <- .q_items(a, b, g, x, dat, Theta, q)
@@ -100,7 +105,12 @@
     for (j in seq_len(J)) {
       Hj <- matrix(0, m, m); Hj[pairs] <- H[, j]; Hj[pairs[, 2:1]] <- H[, j]
       free <- if (j == 1) 1:2 else 1:m
+      if (one && onepl[j]) free <- free[-1]  # slope held fixed: common step below
       step[free, j] <- tryCatch(solve(Hj[free, free], G[free, j]), error = function(e) 0)
+    }
+    if (one) {                               # common slope of the 1PL items
+      h_aa <- sum(H[which(pairs[, 1] == 1 & pairs[, 2] == 1), onepl])
+      step[1, onepl] <- if (h_aa > 0) sum(G[1, onepl]) / h_aa else 0
     }
     frac <- rep(1, J)
     for (h in 0:10) {
@@ -108,6 +118,7 @@
       g_n <- g + t(step[3:m, , drop = FALSE]) * frac
       Qnew <- .q_items(a_n, b_n, g_n, x, dat, Theta, q)
       bad <- Qnew < Qold - 1e-10
+      if (one) bad[onepl] <- sum(Qnew[onepl]) < sum(Qold[onepl]) - 1e-10
       if (!any(bad) || h == 10) break
       frac[bad] <- frac[bad] / 2
     }
@@ -148,7 +159,7 @@
 # min_iter iterations, the change shrank by less than stall_ratio. EM is only a
 # warm start for Newton.
 .em_aq <- function(a, b, g, x, dat, beta, eta, n_nodes = 21, tol = 0.005,
-                   max_iter = 500, stall_ratio = NULL, min_iter = 3, verbose = FALSE, w = NULL) {
+                   max_iter = 500, stall_ratio = NULL, min_iter = 3, verbose = FALSE, w = NULL, onepl = NULL) {
   t0 <- proc.time()[3]
   J <- ncol(dat); K <- ncol(x)
   g <- if (is.null(dim(g))) matrix(g, J, K) else g
@@ -158,7 +169,7 @@
     old <- c(a, b, g, beta, eta)
     es  <- .estep_aq(a, b, g, x, dat, beta, eta, n_nodes, start = mode, w = w)
     mode <- es$mode
-    ip  <- .mstep_items(a, b, g, x, dat, es$q, es$Theta, w = w)
+    ip  <- .mstep_items(a, b, g, x, dat, es$q, es$Theta, w = w, onepl = onepl)
     st  <- .mstep_struct(x, es$Theta, es$q, beta, eta, w = w)
     a <- ip$a; b <- ip$b; g <- ip$g; beta <- st$beta; eta <- st$eta
     change <- max(abs(c(a, b, g, beta, eta) - old))

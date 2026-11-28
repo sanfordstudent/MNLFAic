@@ -16,6 +16,7 @@ mnlfa_fit(
   cluster = NULL,
   weights = NULL,
   replicates = NULL,
+  itemtype = "2PL",
   control = mnlfa_control()
 )
 
@@ -63,6 +64,8 @@ experimental feature).}
 \item{weights, replicates}{For \code{mnlfa_fit()}: optional sampling weights (one
 per person) and replicate weights (N x R matrix), used as given (no senate
 or house rescaling; experimental). See \code{\link[=mnlfa_ic]{mnlfa_ic()}}.}
+
+\item{itemtype}{For \code{mnlfa_fit()}: item types, as in \code{\link[=mnlfa_ic]{mnlfa_ic()}}.}
 
 \item{control}{Settings from \code{\link[=mnlfa_control]{mnlfa_control()}}. For \code{ml1_inference()}, the
 form is taken from \code{control} (\code{mnlfa_control(form = )}), not from a \code{form}

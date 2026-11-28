@@ -41,6 +41,13 @@
 #'   `item_data`. `NULL` (default): no item
 #'   covariates; the analysis is then Chen et al.'s anchor-free method extended
 #'   to an arbitrary number of continuous or categorical person covariates.
+#' @param itemtype Item response model: `"2PL"` (default; every item has its
+#'   own slope) or `"1PL"` (one slope shared by all items and estimated, so
+#'   the latent metric is unchanged), or a vector with one entry per item, in
+#'   the order of the columns of `responses` or named by item, in which case
+#'   all `"1PL"` items share one slope and the `"2PL"` items have their own.
+#'   With only 1PL items, the difficulty and slope-intercept forms (see
+#'   [mnlfa_control()]) differ only by the common slope.
 #' @param cluster Optional cluster identifier (vector with one value per
 #'   person, or the name of a column of `person_data`). Adds a cluster-robust
 #'   covariance for inference, or, with
@@ -97,7 +104,8 @@
 #' fit
 #' summary(fit)
 #' @export
-mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NULL, cluster = NULL,
+mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NULL, itemtype = "2PL",
+                     cluster = NULL,
                      weights = NULL, weight_by = NULL, replicate_weights = NULL,
                      control = mnlfa_control(), inference = TRUE, start = NULL,
                      na_action = c("fail", "omit")) {
@@ -113,10 +121,12 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
   # weights without cluster or replicates: each person is a cluster (robust)
   cl_fit <- if (weighted && is.null(prep$cluster) && is.null(prep$replicates)) seq_len(nrow(prep$dat)) else prep$cluster
   dat <- prep$dat; x <- prep$x; J <- ncol(dat); K <- ncol(x)
+  onepl <- .prepare_itemtype(itemtype, colnames(dat))
   if (is.null(start)) start <- .default_start(dat, K)
 
   fit <- .fit_stage1(dat, x, start, anchor = control$anchor, cluster = cl_fit, weights = prep$weights,
                      replicates = prep$replicates, replicate_method = control$replicate_method, fay = control$fay,
+                     onepl = onepl,
                      em_tol = control$em_tol, em_stall = control$em_stall, newton_tol = control$newton_tol,
                      max_newton = control$max_newton, n_nodes = control$n_nodes,
                      max_fallback = control$max_fallback, fallback_em_iter = control$fallback_em_iter,
@@ -134,6 +144,7 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
                 responses = dat, x = x, cluster = prep$cluster, weights = prep$weights, weight_by = prep$weight_by,
                 kept = prep$kept, N_input = prep$N_input),
     coding = list(person_terms = prep$person_terms, person_levels = prep$person_levels, design = prep$design,
+                  itemtype = ifelse(if (is.null(onepl)) rep(FALSE, J) else onepl, "1PL", "2PL"),
                   form = control$form),
     stage1 = fit, stage2 = NULL, inference = NULL, control = control,
     timing = c(stage1 = unname(t1 - t0))), class = "mnlfa_ic")

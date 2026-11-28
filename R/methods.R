@@ -97,6 +97,10 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
   cat(sprintf("  %d persons, %d items; person covariates: %s\n", d$N, d$J, paste(d$covariates, collapse = ", ")))
   des <- x$coding$design
   cat("  item covariates:", if (is.null(des)) "none" else paste(names(des$coding), collapse = ", "), "\n")
+  it <- x$coding$itemtype
+  if (!is.null(it) && any(it == "1PL"))
+    cat(if (all(it == "1PL")) "  item type: 1PL (one common slope)\n" else
+          sprintf("  item types: %d 1PL (one common slope), %d 2PL\n", sum(it == "1PL"), sum(it == "2PL")))
   if (!is.null(d$weights))
     cat("  sampling weights", if (is.null(d$weight_by)) "" else
           sprintf("(%s scaling within %d groups)", x$control$weight_scale, length(unique(d$weight_by))), "\n")
