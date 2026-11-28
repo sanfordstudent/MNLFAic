@@ -11,7 +11,8 @@
          loglik = fit$loglik, convergence = fit$convergence,
          anchor = if (!is.null(fit$anchor)) fit$anchor else 1L,
          vcov_type = if (!is.null(fit$vcov_type)) fit$vcov_type else "model",
-         cluster_scores = fit$cluster_scores, n_clusters = fit$n_clusters), extra)
+         cluster_scores = fit$cluster_scores, n_clusters = fit$n_clusters, t_df = fit$t_df,
+         replicate = fit$replicate, rep_method = fit$rep_method, rep_fay = fit$rep_fay), extra)
 }
 
 .restore_stage1_fit <- function(s) {
@@ -19,7 +20,9 @@
   info[upper.tri(info, diag = TRUE)] <- s$info_upper
   s$info <- info + t(info) - diag(diag(info))
   s$info_upper <- NULL
-  if (identical(s$vcov_type, "cluster")) {
+  if (identical(s$vcov_type, "replicate")) {
+    s <- .set_replicate_vcov(s, s$rep_method, s$rep_fay)
+  } else if (identical(s$vcov_type, "cluster")) {
     s$vcov <- .stage1_cluster_vcov(s$info, s$cluster_scores)
   } else {
     Vm <- solve(s$info); s$vcov <- (Vm + t(Vm)) / 2; s$vcov_type <- "model"

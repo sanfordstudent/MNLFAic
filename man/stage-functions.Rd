@@ -14,6 +14,8 @@ mnlfa_fit(
   x,
   start = NULL,
   cluster = NULL,
+  weights = NULL,
+  replicates = NULL,
   control = mnlfa_control()
 )
 
@@ -57,6 +59,10 @@ intercept).}
 
 \item{cluster}{For \code{mnlfa_fit()}: optional cluster identifier (currently an
 experimental feature).}
+
+\item{weights, replicates}{For \code{mnlfa_fit()}: optional sampling weights (one
+per person) and replicate weights (N x R matrix), used as given (no senate
+or house rescaling; experimental). See \code{\link[=mnlfa_ic]{mnlfa_ic()}}.}
 
 \item{control}{Settings from \code{\link[=mnlfa_control]{mnlfa_control()}}. For \code{ml1_inference()}, the
 form is taken from \code{control} (\code{mnlfa_control(form = )}), not from a \code{form}

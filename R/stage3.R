@@ -6,7 +6,8 @@
 #      N(0, V), V = I^{-1} (or the cluster-robust covariance; then a
 #      multivariate t with G - 1 df by default), or, with
 #      cluster_method = "wild", by the score wild cluster bootstrap
-#      (.wild_cluster_draws());
+#      (.wild_cluster_draws()) or its replicate-weight analogue
+#      (.wild_replicate_draws());
 #   2. apply Stage 2 to center + Z_m;
 #   3. e_m = G(center + Z_m) - G(center) for every output quantity G;
 #   4. intervals, p-values and SEs from the e_m.
@@ -82,16 +83,27 @@
 # draws). `weights`: optional M x G weight matrix (for tests).
 .wild_weight_type <- function(G, M) if (2^G < M) "webb" else "rademacher"
 
+.wild_weights <- function(M, G) {
+  vals <- switch(.wild_weight_type(G, M),
+                 rademacher = c(-1, 1),
+                 webb = c(-sqrt(3 / 2), -1, -sqrt(1 / 2), sqrt(1 / 2), 1, sqrt(3 / 2)))
+  matrix(vals[sample.int(length(vals), M * G, replace = TRUE)], M, G)
+}
+
 .wild_cluster_draws <- function(cluster_scores, info, M, weights = NULL) {
   G <- nrow(cluster_scores)
-  if (is.null(weights)) {
-    vals <- switch(.wild_weight_type(G, M),
-                   rademacher = c(-1, 1),
-                   webb = c(-sqrt(3 / 2), -1, -sqrt(1 / 2), sqrt(1 / 2), 1, sqrt(3 / 2)))
-    weights <- matrix(vals[sample.int(length(vals), M * G, replace = TRUE)], M, G)
-  }
+  if (is.null(weights)) weights <- .wild_weights(M, G)
   Vm <- solve(info); Vm <- (Vm + t(Vm)) / 2
   sqrt(G / (G - 1)) * (weights %*% cluster_scores) %*% Vm
+}
+
+# Wild bootstrap with replicate weights: Z_m = sqrt(c) sum_u w_mu B_u, with B
+# from .replicate_contributions() (one row per independent replicate unit,
+# e.g. per JK2 zone) and c the replication constant, so that over the weights
+# Cov(Z_m) = c B'B, the replicate covariance.
+.wild_replicate_draws <- function(B, scale, M, weights = NULL) {
+  if (is.null(weights)) weights <- .wild_weights(M, nrow(B))
+  sqrt(scale) * (weights %*% B)
 }
 
 # Threshold (in bootstrap SEs) for threshold centering: a number, or a rule.
@@ -147,20 +159,26 @@
   cov_names <- if (!is.null(colnames(fit$gamma.mat))) colnames(fit$gamma.mat) else paste0("x", 1:K)
 
   anchor <- if (!is.null(fit$anchor)) fit$anchor else 1L
-  use_cluster <- vcov == "auto" && identical(fit$vcov_type, "cluster")
+  # design-based covariance: "cluster" (CR1) or "replicate" (replicate weights)
+  design_type <- if (is.null(fit$vcov_type)) "model" else fit$vcov_type
+  use_cluster <- vcov == "auto" && design_type %in% c("cluster", "replicate")
   varian <- if (use_cluster) fit$vcov else solve(fit$info)
-  vcov_type <- if (use_cluster) "cluster" else "model"
+  vcov_type <- if (use_cluster) design_type else "model"
   wild <- use_cluster && cluster_method == "wild"
-  if (wild && is.null(fit$cluster_scores)) stop("The fit has no cluster score sums for the wild bootstrap.", call. = FALSE)
+  if (wild && vcov_type == "cluster" && is.null(fit$cluster_scores))
+    stop("The fit has no cluster score sums for the wild bootstrap.", call. = FALSE)
+  n_units <- if (vcov_type == "cluster") fit$n_clusters else if (vcov_type == "replicate") fit$replicate$n_units else NA
+  t_df <- if (!is.null(fit$t_df)) fit$t_df else fit$n_clusters - 1
   est <- .ml1_itemcov(fit$gamma.mat, fit$alpha.vec, fit$beta, W, metric)
 
   draw_df <- NA
   noise <- .with_seed(seed, {
     # (the expression is evaluated in this function's frame: no return() here)
-    nz <- if (wild) .wild_cluster_draws(fit$cluster_scores, fit$info, M) else
+    nz <- if (wild && vcov_type == "cluster") .wild_cluster_draws(fit$cluster_scores, fit$info, M) else
+      if (wild) .wild_replicate_draws(fit$replicate$B, fit$rep_scale, M) else
       MASS::mvrnorm(n = M, mu = rep(0, nrow(varian)), Sigma = varian)
-    if (use_cluster && cluster_t && !wild) {              # multivariate t, G - 1 df (after the normals)
-      draw_df <- fit$n_clusters - 1
+    if (use_cluster && cluster_t && !wild) {              # multivariate t (after the normals)
+      draw_df <- t_df
       nz <- nz / sqrt(stats::rchisq(M, draw_df) / draw_df)
     }
     nz
@@ -305,8 +323,10 @@
                     n_residuals_zeroed = n_zeroed, fdr = fdr,
                     nonunique_rate = d$nonunique_rate, vcov_type = vcov_type, draw_df = draw_df,
                     cluster_method = if (use_cluster) cluster_method else NA,
-                    wild_weights = if (wild) .wild_weight_type(fit$n_clusters, M) else NA,
-                    n_clusters = if (vcov_type == "cluster") fit$n_clusters else NA))
+                    wild_weights = if (wild) .wild_weight_type(n_units, M) else NA,
+                    n_clusters = if (vcov_type == "cluster") fit$n_clusters else NA,
+                    n_units = n_units, t_df = if (use_cluster) t_df else NA,
+                    replicate_method = if (vcov_type == "replicate") fit$rep_method else NA))
   if (keep_draws) out$draws <- list(e_eps = e_eps, e_nu = e_nu, e_gamma = e_gamma,
                                     e_alpha = e_alpha, noise = noise)
   out

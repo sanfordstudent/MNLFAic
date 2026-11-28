@@ -46,6 +46,18 @@
 #'   covariance for inference, or, with
 #'   `mnlfa_control(cluster_method = "wild")`, a score wild cluster bootstrap.
 #'   This is currently an experimental feature.
+#' @param weights Optional sampling weights (vector with one value per
+#'   person, or the name of a column of `person_data`), e.g. the total student
+#'   weight of an international assessment. Experimental; see Details.
+#' @param weight_by Optional groups within which the weights are rescaled
+#'   (vector or column name), usually countries; see `weight_scale` in
+#'   [mnlfa_control()]. Experimental.
+#' @param replicate_weights Optional replicate weights for the variance: a
+#'   matrix or data frame with one row per person, or the names of columns of
+#'   `person_data`. Needs `weights`; the replication method is set by
+#'   `replicate_method` in [mnlfa_control()]. For TIMSS and PIRLS, which
+#'   provide jackknife zones rather than replicate weights, see
+#'   [ilsa_replicates()]. Experimental.
 #' @param control Settings from [mnlfa_control()].
 #' @param inference Run the bootstrap inference (Stage 3). If `FALSE`, only
 #'   point estimates are computed; use [infer()] later.
@@ -55,6 +67,24 @@
 #'   everything else 0.
 #' @param na_action What to do with persons who have missing person covariates
 #'   (or cluster): `"fail"` (default) or `"omit"`.
+#'
+#' @details **Sampling weights (experimental).** With `weights`, Stage 1
+#'   maximizes the weighted (pseudo-) log-likelihood, so the estimates refer to
+#'   the population the weights describe. The model-based covariance is not
+#'   valid with sampling weights, so the inference uses a design-based one:
+#'   * with `replicate_weights`: the replicate-weight covariance. Each
+#'     replicate's estimates are approximated by one Newton step from the
+#'     full-sample estimates, so no refitting is needed;
+#'   * with `cluster` (e.g., schools): the weighted cluster-robust covariance,
+#'     which ignores stratification and is therefore conservative;
+#'   * otherwise: a weighted robust covariance, with each person as a cluster.
+#'
+#'   The weights are first rescaled within the `weight_by` groups (senate or
+#'   house; see [mnlfa_control()]), and the replicate weights by the same
+#'   factors. When groups are pooled, as with countries in an international
+#'   assessment, replicate r perturbs zone r in every group at once, as in the
+#'   IEA's pooled analyses; this is valid because the groups are independent
+#'   samples.
 #'
 #' @return An object of class `mnlfa_ic`; see [summary.mnlfa_ic()],
 #'   [dif_table()], [coef.mnlfa_ic()], [confint.mnlfa_ic()], [diagnose()] and
@@ -68,17 +98,25 @@
 #' summary(fit)
 #' @export
 mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NULL, cluster = NULL,
+                     weights = NULL, weight_by = NULL, replicate_weights = NULL,
                      control = mnlfa_control(), inference = TRUE, start = NULL,
                      na_action = c("fail", "omit")) {
   cl_call <- match.call()
   na_action <- match.arg(na_action)
   if (!inherits(control, "mnlfa_control")) stop("`control` must come from mnlfa_control().", call. = FALSE)
   t0 <- proc.time()[3]
-  prep <- .prepare_all(responses, person_data, person, item_data, item, cluster, control, na_action)
+  prep <- .prepare_all(responses, person_data, person, item_data, item, cluster, control, na_action,
+                       weights, weight_by, replicate_weights)
+  weighted <- !is.null(prep$weights)
+  if (weighted && control$vcov == "model")
+    stop("The model-based covariance is not valid with sampling weights; use vcov = \"auto\".", call. = FALSE)
+  # weights without cluster or replicates: each person is a cluster (robust)
+  cl_fit <- if (weighted && is.null(prep$cluster) && is.null(prep$replicates)) seq_len(nrow(prep$dat)) else prep$cluster
   dat <- prep$dat; x <- prep$x; J <- ncol(dat); K <- ncol(x)
   if (is.null(start)) start <- .default_start(dat, K)
 
-  fit <- .fit_stage1(dat, x, start, anchor = control$anchor, cluster = prep$cluster,
+  fit <- .fit_stage1(dat, x, start, anchor = control$anchor, cluster = cl_fit, weights = prep$weights,
+                     replicates = prep$replicates, replicate_method = control$replicate_method, fay = control$fay,
                      em_tol = control$em_tol, em_stall = control$em_stall, newton_tol = control$newton_tol,
                      max_newton = control$max_newton, n_nodes = control$n_nodes,
                      max_fallback = control$max_fallback, fallback_em_iter = control$fallback_em_iter,
@@ -87,12 +125,14 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
   names(fit$alpha.vec) <- names(fit$beta.vec) <- colnames(dat)
   names(fit$beta) <- names(fit$eta) <- colnames(x)
   fit$N <- nrow(dat)
+  fit$cluster_is_person <- weighted && is.null(prep$cluster) && is.null(prep$replicates)
   t1 <- proc.time()[3]
 
   obj <- structure(list(
     call = cl_call,
     data = list(N = nrow(dat), J = J, K = K, items = colnames(dat), covariates = colnames(x),
-                responses = dat, x = x, cluster = prep$cluster, kept = prep$kept, N_input = prep$N_input),
+                responses = dat, x = x, cluster = prep$cluster, weights = prep$weights, weight_by = prep$weight_by,
+                kept = prep$kept, N_input = prep$N_input),
     coding = list(person_terms = prep$person_terms, person_levels = prep$person_levels, design = prep$design,
                   form = control$form),
     stage1 = fit, stage2 = NULL, inference = NULL, control = control,
@@ -111,6 +151,10 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
 
 .run_stage3 <- function(object) {
   ctl <- object$control; t0 <- proc.time()[3]
+  if (identical(object$stage1$vcov_type, "replicate"))       # replication constant may have changed
+    object$stage1 <- .set_replicate_vcov(object$stage1, ctl$replicate_method, ctl$fay)
+  if (!is.null(object$data$weights) && ctl$vcov == "model")
+    stop("The model-based covariance is not valid with sampling weights; use vcov = \"auto\".", call. = FALSE)
   if (ctl$verbose) message("Stage 3: ", ctl$M, " bootstrap draws")
   object$inference <- .dif_inference_itemcov(
     object$stage1, W = .W_of(object), design = object$coding$design, metric = .form_metric(ctl$form),
@@ -133,7 +177,7 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
 #' @param object An `mnlfa_ic` fit.
 #' @param ... Arguments of [mnlfa_control()] to change, e.g. `M = 5000`,
 #'   `center = "estimate"`, `seed = 2`. `item_omit`, `item_standardize`,
-#'   `anchor` and the Stage-1 numerical settings (`n_nodes` through
+#'   `weight_scale`, `anchor` and the Stage-1 numerical settings (`n_nodes` through
 #'   `fallback_em_iter`) cannot be changed here; they need a new call to
 #'   [mnlfa_ic()].
 #' @return The updated `mnlfa_ic` object.
@@ -146,7 +190,7 @@ mnlfa_ic <- function(responses, person_data, person, item_data = NULL, item = NU
 infer <- function(object, ...) {
   if (!inherits(object, "mnlfa_ic")) stop("`object` must be an mnlfa_ic fit.", call. = FALSE)
   changes <- list(...)
-  fixed <- c("item_omit", "item_standardize", "anchor", "n_nodes", "em_tol", "em_stall", "newton_tol",
+  fixed <- c("item_omit", "item_standardize", "weight_scale", "anchor", "n_nodes", "em_tol", "em_stall", "newton_tol",
              "max_newton", "max_fallback", "fallback_em_iter")
   if (any(names(changes) %in% fixed))
     stop("These settings need a new fit with mnlfa_ic(): ", paste(intersect(names(changes), fixed), collapse = ", "),

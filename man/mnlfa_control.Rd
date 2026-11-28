@@ -27,6 +27,9 @@ mnlfa_control(
   vcov = c("auto", "model"),
   cluster_t = TRUE,
   cluster_method = c("sandwich", "wild"),
+  replicate_method = c("JK2", "JK2-half", "BRR"),
+  fay = 0.5,
+  weight_scale = c("senate", "house"),
   seed = NULL,
   verbose = FALSE
 )
@@ -105,6 +108,26 @@ covariance: \code{"sandwich"} (default; multivariate normal or, with
 \code{cluster_t}, t draws from the cluster-robust covariance) or \code{"wild"} (score
 wild cluster bootstrap; see Details). Used only with \code{cluster}, an
 experimental feature.}
+
+\item{replicate_method, fay}{Replication method of the replicate weights
+given to \code{\link[=mnlfa_ic]{mnlfa_ic()}} (experimental): \code{"JK2"} (default; jackknife with
+both halves of every zone, as in IEA studies from 2015 onward, e.g.
+TIMSS 2015-2023 and PIRLS 2016-2021; variance factor 1/2), \code{"JK2-half"}
+(one replicate per zone, as in earlier IEA cycles; factor 1) or \code{"BRR"}
+(Fay's balanced repeated replication with factor \code{fay}, as in PISA with
+\code{fay = 0.5}; variance factor \eqn{1 / (R (1 - k)^2)}{1 / (R (1 - k)^2)}).
+Choosing the wrong method doubles or halves the variance. Used only with
+replicate weights.}
+
+\item{weight_scale}{Rescaling of sampling weights within the groups given
+by \code{weight_by} in \code{\link[=mnlfa_ic]{mnlfa_ic()}} (usually countries; experimental):
+\code{"senate"} (default; every group has the same total weight, so groups
+contribute equally to parameters shared across them, such as the item
+slopes) or \code{"house"} (every group's weights sum to its sample size, so
+groups contribute in proportion to their samples). The terms follow the
+IEA's student senate and house weights. The overall total is always the
+number of persons. Without \code{weight_by} the two are identical. Cannot be
+changed with \code{\link[=infer]{infer()}}.}
 
 \item{seed}{Optional seed for the bootstrap draws. The caller's random-number
 stream is left unchanged. A seed reproduces results exactly on the same

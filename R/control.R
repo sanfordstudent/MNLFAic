@@ -60,6 +60,24 @@
 #'   `cluster_t`, t draws from the cluster-robust covariance) or `"wild"` (score
 #'   wild cluster bootstrap; see Details). Used only with `cluster`, an
 #'   experimental feature.
+#' @param replicate_method,fay Replication method of the replicate weights
+#'   given to [mnlfa_ic()] (experimental): `"JK2"` (default; jackknife with
+#'   both halves of every zone, as in IEA studies from 2015 onward, e.g.
+#'   TIMSS 2015-2023 and PIRLS 2016-2021; variance factor 1/2), `"JK2-half"`
+#'   (one replicate per zone, as in earlier IEA cycles; factor 1) or `"BRR"`
+#'   (Fay's balanced repeated replication with factor `fay`, as in PISA with
+#'   `fay = 0.5`; variance factor \eqn{1 / (R (1 - k)^2)}{1 / (R (1 - k)^2)}).
+#'   Choosing the wrong method doubles or halves the variance. Used only with
+#'   replicate weights.
+#' @param weight_scale Rescaling of sampling weights within the groups given
+#'   by `weight_by` in [mnlfa_ic()] (usually countries; experimental):
+#'   `"senate"` (default; every group has the same total weight, so groups
+#'   contribute equally to parameters shared across them, such as the item
+#'   slopes) or `"house"` (every group's weights sum to its sample size, so
+#'   groups contribute in proportion to their samples). The terms follow the
+#'   IEA's student senate and house weights. The overall total is always the
+#'   number of persons. Without `weight_by` the two are identical. Cannot be
+#'   changed with [infer()].
 #' @param seed Optional seed for the bootstrap draws. The caller's random-number
 #'   stream is left unchanged. A seed reproduces results exactly on the same
 #'   machine; across platforms the multivariate normal draws can differ at the
@@ -95,10 +113,15 @@ mnlfa_control <- function(form = c("difficulty", "slope-intercept"), item_omit =
                           threshold = "sqrt2loglogN", level = 0.95, fdr = 0.05,
                           ci_effects = c("symmetric", "equal"), ci_dif = c("symmetric", "equal"),
                           vcov = c("auto", "model"), cluster_t = TRUE, cluster_method = c("sandwich", "wild"),
+                          replicate_method = c("JK2", "JK2-half", "BRR"), fay = 0.5,
+                          weight_scale = c("senate", "house"),
                           seed = NULL, verbose = FALSE) {
+  weight_scale <- match.arg(weight_scale)
   form <- match.arg(form); center <- match.arg(center)
   ci_effects <- match.arg(ci_effects); ci_dif <- match.arg(ci_dif); vcov <- match.arg(vcov)
-  cluster_method <- match.arg(cluster_method)
+  cluster_method <- match.arg(cluster_method); replicate_method <- match.arg(replicate_method)
+  if (!is.numeric(fay) || length(fay) != 1 || is.na(fay) || fay < 0 || fay >= 1)
+    stop("`fay` must be a number in [0, 1).", call. = FALSE)
   .check_count <- function(v, nm, min = 1) {
     if (!is.numeric(v) || length(v) != 1 || is.na(v) || v < min || v != round(v))
       stop("`", nm, "` must be a whole number >= ", min, ".", call. = FALSE)
@@ -132,7 +155,8 @@ mnlfa_control <- function(form = c("difficulty", "slope-intercept"), item_omit =
                  max_newton = max_newton, max_fallback = max_fallback, fallback_em_iter = fallback_em_iter,
                  M = M, n_pilot = n_pilot, center = center, threshold = threshold, level = level, fdr = fdr,
                  ci_effects = ci_effects, ci_dif = ci_dif, vcov = vcov, cluster_t = cluster_t,
-                 cluster_method = cluster_method, seed = seed,
+                 cluster_method = cluster_method, replicate_method = replicate_method, fay = fay,
+                 weight_scale = weight_scale, seed = seed,
                  verbose = verbose),
             class = "mnlfa_control")
 }

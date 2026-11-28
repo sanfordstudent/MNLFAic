@@ -25,30 +25,32 @@
 # Fit with item 1 as the anchor (its DIF fixed at 0).
 # dat, x: N x J responses (0/1/NA), N x K person covariates
 # start : list(a, b, g, beta, eta) (g: J x K, row 1 = 0)
+# w     : optional sampling weights (one per person); the fit maximizes the
+#         weighted (pseudo-) log-likelihood
 # Returns the estimates (beta, eta, alpha.vec = slopes, beta.vec = intercepts,
 # gamma.mat = J x K DIF), post (N x n posterior weights), nodes (N x n), info
 # (observed information, anchor removed), loglik, convergence.
 .fit_stage1_anchor1 <- function(dat, x, start, em_tol = 0.005, em_stall = 0.5, newton_tol = 1e-4,
                                 max_newton = 25, n_nodes = 21, max_fallback = 3,
-                                fallback_em_iter = 50, verbose = FALSE) {
+                                fallback_em_iter = 50, verbose = FALSE, w = NULL) {
   t_start <- proc.time()[3]
   J <- ncol(dat); K <- ncol(x)
   start_g <- if (is.null(dim(start$g))) matrix(start$g, J, K) else start$g
 
   em <- .em_aq(start$a, start$b, start_g, x, dat, start$beta, start$eta, n_nodes = n_nodes,
-               tol = em_tol, stall_ratio = em_stall, verbose = verbose)
+               tol = em_tol, stall_ratio = em_stall, verbose = verbose, w = w)
   em_iter <- em$iterations
   last_mode <- em$mode
   e_step <- function(u) {
-    es <- .estep_aq(u$a, u$b, u$g, x, dat, u$beta, u$eta, n_nodes, start = last_mode)
+    es <- .estep_aq(u$a, u$b, u$g, x, dat, u$beta, u$eta, n_nodes, start = last_mode, w = w)
     last_mode <<- es$mode
     es
   }
-  info_at <- function(u, es) .info_stage1(u$a, u$b, u$g, x, dat, u$beta, u$eta, es$q, es$Theta)
+  info_at <- function(u, es) .info_stage1(u$a, u$b, u$g, x, dat, u$beta, u$eta, es$q, es$Theta, w = w)
   if (verbose) message(sprintf("EM: %d iterations, %.0f s", em_iter, proc.time()[3] - t_start))
 
   em_more <- function(u) .em_aq(u$a, u$b, u$g, x, dat, u$beta, u$eta, n_nodes = n_nodes,
-                                tol = em_tol / 10, max_iter = fallback_em_iter)
+                                tol = em_tol / 10, max_iter = fallback_em_iter, w = w)
   can_fallback <- function() n_fallback < max_fallback
   fallback <- function(reason, it) {
     n_fallback <<- n_fallback + 1
@@ -73,7 +75,7 @@
 
   repeat {
     for (it in seq_len(max_newton)) {
-      score <- .score_stage1(u$a, u$b, u$g, x, dat, u$beta, u$eta, es$q, es$Theta)
+      score <- .score_stage1(u$a, u$b, u$g, x, dat, u$beta, u$eta, es$q, es$Theta, w = w)
       info  <- info_at(u, es)
       step  <- tryCatch(solve(info, score), error = function(e) NULL)
       failed <- if (is.null(step)) "singular information" else NA_character_
@@ -111,7 +113,7 @@
 
   info  <- info_at(u, es)
   info  <- (info + t(info)) / 2           # exactly symmetric
-  score <- .score_stage1(u$a, u$b, u$g, x, dat, u$beta, u$eta, es$q, es$Theta)
+  score <- .score_stage1(u$a, u$b, u$g, x, dat, u$beta, u$eta, es$q, es$Theta, w = w)
   list(beta = u$beta, eta = u$eta, alpha.vec = u$a, beta.vec = u$b, gamma.mat = u$g,
        post = es$q, nodes = es$Theta, info = info, loglik = ll,
        convergence = list(converged = converged, stop_reason = stop_reason, em_fallbacks = n_fallback,
@@ -160,14 +162,32 @@
 #            robust covariance vcov = I^{-1} [G/(G-1) sum_g S_g S_g'] I^{-1}
 #            from the cluster sums S_g of per-person scores; estimates are
 #            unchanged.
+#   weights: optional sampling weights (one per person, >= 0), used as given
+#            (scaling is done by the caller). The estimates maximize the
+#            weighted log-likelihood; the cluster sums use weighted scores.
+#   replicates: optional N x R replicate weights (needs `weights`, scaled the
+#            same way; not with `cluster`). Adds the replicate-weight
+#            covariance by one-step linearization (.replicate_contributions());
+#            replicate_method and fay set its constant (.set_replicate_vcov()).
 # Items are reordered so the anchor comes first, fitted, and every output is
 # mapped back: alpha.vec, beta.vec, gamma.mat (row `anchor` is the fixed 0);
 # info (and vcov) laid out as beta (K), eta (K), a (J), b (J), then the DIF of
 # the non-anchor items in original order (row-major). Adds anchor, vcov,
 # vcov_type ("model"/"cluster"), and with a cluster n_clusters and
 # cluster_scores (G x D).
-.fit_stage1 <- function(dat, x, start, anchor = "auto", cluster = NULL, ...) {
+.fit_stage1 <- function(dat, x, start, anchor = "auto", cluster = NULL, weights = NULL, replicates = NULL,
+                        replicate_method = "JK2", fay = 0.5, ...) {
   J <- ncol(dat); K <- ncol(x)
+  if (!is.null(weights) && (length(weights) != nrow(dat) || anyNA(weights) || any(weights < 0)))
+    stop("`weights` must have one non-negative, non-missing value per person.", call. = FALSE)
+  if (!is.null(replicates)) {
+    if (is.null(weights)) stop("Replicate weights need the full-sample `weights`.", call. = FALSE)
+    if (!is.null(cluster)) stop("Use either `cluster` or replicate weights, not both.", call. = FALSE)
+    replicates <- as.matrix(replicates)
+    if (nrow(replicates) != nrow(dat) || anyNA(replicates) || any(replicates < 0))
+      stop("Replicate weights must be a matrix with one row per person and no missing or negative values.",
+           call. = FALSE)
+  }
   if (!is.null(cluster)) {
     if (length(cluster) != nrow(dat)) stop("`cluster` must have one value per person (row of the data).", call. = FALSE)
     if (anyNA(cluster)) stop("`cluster` contains missing values.", call. = FALSE)
@@ -176,25 +196,31 @@
   ord <- c(a, setdiff(seq_len(J), a)); inv <- order(ord)        # original item j sits at position inv[j]
   dat_o <- dat[, ord, drop = FALSE]
   if (a == 1L) {
-    fit <- .fit_stage1_anchor1(dat, x, start, ...)
+    fit <- .fit_stage1_anchor1(dat, x, start, w = weights, ...)
     P <- seq_len(nrow(fit$info))
   } else {
     g <- if (is.null(dim(start$g))) matrix(start$g, J, K) else start$g
     st <- start; st$a <- start$a[ord]; st$b <- start$b[ord]
     st$g <- g[ord, , drop = FALSE]; st$g[1, ] <- 0
-    fit <- .fit_stage1_anchor1(dat_o, x, st, ...)
+    fit <- .fit_stage1_anchor1(dat_o, x, st, w = weights, ...)
     ix_a <- 2 * K + seq_len(J); ix_b <- 2 * K + J + seq_len(J)
     g_pos <- function(r) 2 * K + 2 * J + (r - 2) * K + seq_len(K)   # DIF block of reordered item r >= 2
     P <- c(seq_len(2 * K), ix_a[inv], ix_b[inv],
            unlist(lapply(setdiff(seq_len(J), a), function(j) g_pos(inv[j]))))
   }
-  S <- if (!is.null(cluster)) .stage1_person_scores(fit, dat_o, x) else NULL
+  S <- if (!is.null(cluster) || !is.null(replicates)) .stage1_person_scores(fit, dat_o, x) else NULL
+  if (!is.null(S) && !is.null(weights) && is.null(replicates)) S <- weights * S
+  fit$weights <- weights
   if (a != 1L) {
     fit$alpha.vec <- fit$alpha.vec[inv]; fit$beta.vec <- fit$beta.vec[inv]
     fit$gamma.mat <- fit$gamma.mat[inv, , drop = FALSE]
     fit$info <- fit$info[P, P]
   }
   fit$anchor <- a
+  if (!is.null(replicates)) {
+    fit$replicate <- .replicate_contributions(S[, P, drop = FALSE], replicates - weights, fit$info)
+    return(.set_replicate_vcov(fit, replicate_method, fay))
+  }
   .add_stage1_vcov(fit, if (is.null(S)) NULL else S[, P, drop = FALSE], cluster)
 }
 
@@ -210,8 +236,58 @@
   if (G < 20) warning("Only ", G, " clusters; cluster-robust standard errors may be too small.", call. = FALSE)
   fit$cluster_scores <- Sg
   fit$n_clusters <- G
+  fit$t_df <- G - 1
   fit$vcov <- .stage1_cluster_vcov(fit$info, Sg)
   fit$vcov_type <- "cluster"
+  fit
+}
+
+# Replicate-weight covariance by one-step linearization. Replicate r's estimates
+# are approximated by one Newton step from the full-sample estimates, where the
+# full-sample weighted score is zero:
+#   d_r = I_w^{-1} sum_i (w_ir - w_i) s_i,
+# and V = c sum_r d_r d_r' with the replication constant c. Replicates whose
+# weight changes are exact negatives of each other (JK2 with both halves of
+# every zone) have d_s = -d_r; each such pair is kept once with multiplicity 2,
+# so the wild bootstrap gets one weight per zone. Replicates with no weight
+# change (unused zones) are dropped.
+# S: N x D unweighted per-person scores; delta: N x R; info: the weighted
+# information. Returns B (rows sqrt(multiplicity) d_r, so V = c B'B),
+# n_replicates (R), n_units (rows of B) and n_paired.
+.replicate_contributions <- function(S, delta, info) {
+  R <- ncol(delta)
+  Vm <- solve(info); Vm <- (Vm + t(Vm)) / 2
+  d <- t(Vm %*% crossprod(S, delta))
+  nrm <- sqrt(colSums(delta^2))
+  C <- crossprod(delta)
+  keep <- nrm > 0; mult <- rep(1, R)
+  for (r in which(keep)) {
+    if (!keep[r] || mult[r] == 2) next
+    tol <- 1e-10 * nrm[r] * nrm
+    s <- which(keep & seq_len(R) > r & mult == 1 & abs(C[r, ] + nrm[r] * nrm) <= tol & abs(nrm - nrm[r]) <= 1e-10 * nrm[r])
+    if (length(s) > 0) { keep[s[1]] <- FALSE; mult[r] <- 2 }
+  }
+  list(B = sqrt(mult[keep]) * d[keep, , drop = FALSE], n_replicates = R, n_units = sum(keep),
+       n_paired = sum(mult[keep] == 2))
+}
+
+# Replication constant and degrees of freedom.
+#   JK2      : both halves of every zone (IEA, 2015 onward): c = 1/2, df = zones
+#   JK2-half : one replicate per zone (earlier IEA cycles): c = 1, df = zones
+#   BRR      : Fay's method with factor k (PISA: k = 0.5, R = 80): c = 1 / (R (1 - k)^2), df = R
+.replicate_scale <- function(method, R, fay) {
+  switch(method, JK2 = 0.5, `JK2-half` = 1, BRR = 1 / (R * (1 - fay)^2),
+         stop("Unknown replicate method: ", method, call. = FALSE))
+}
+
+.set_replicate_vcov <- function(fit, method = "JK2", fay = 0.5) {
+  rp <- fit$replicate
+  c0 <- .replicate_scale(method, rp$n_replicates, fay)
+  V <- c0 * crossprod(rp$B)
+  fit$vcov <- (V + t(V)) / 2
+  fit$vcov_type <- "replicate"
+  fit$rep_method <- method; fit$rep_fay <- fay; fit$rep_scale <- c0
+  fit$t_df <- if (method == "BRR") rp$n_replicates else rp$n_units
   fit
 }
 

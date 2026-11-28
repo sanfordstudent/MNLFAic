@@ -107,6 +107,49 @@
   des
 }
 
+# Replicate weights: a matrix or data frame (one row per person), or the
+# names of columns of person_data.
+.prepare_replicates <- function(rw, person_data, N0) {
+  if (is.null(rw)) return(NULL)
+  if (is.character(rw)) {
+    miss <- setdiff(rw, names(person_data))
+    if (length(miss)) stop("Replicate weight column(s) not in `person_data`: ", paste(miss, collapse = ", "), ".", call. = FALSE)
+    rw <- person_data[, rw, drop = FALSE]
+  }
+  rw <- as.matrix(rw)
+  if (!is.numeric(rw) || nrow(rw) != N0)
+    stop("`replicate_weights` must be numeric with one row per person (", N0, ").", call. = FALSE)
+  unname(rw)
+}
+
+# Senate or house scaling of the weights (and, by the same factor, the
+# replicate weights) within the groups `by`: senate = every group sums to
+# N / (number of groups), house = every group sums to its sample size. The
+# overall total is N either way.
+.scale_weights <- function(w, rw, by, scale = c("senate", "house")) {
+  scale <- match.arg(scale)
+  g <- if (is.null(by)) factor(rep(1, length(w))) else factor(by)
+  tot <- tapply(w, g, sum)
+  if (any(tot <= 0)) stop("Every `weight_by` group needs a positive total weight.", call. = FALSE)
+  n_g <- tabulate(g, nlevels(g))
+  target <- if (scale == "senate") rep(length(w) / nlevels(g), nlevels(g)) else n_g
+  f <- as.vector(target / tot)[as.integer(g)]
+  list(w = w * f, rw = if (is.null(rw)) NULL else rw * f)
+}
+
+# Item x person-covariate cells without any observed response among persons
+# with a nonzero value of the covariate (e.g., an item not administered in a
+# country): that DIF parameter cannot be estimated.
+.empty_dif_cells <- function(dat, x) {
+  obs <- !is.na(dat)
+  out <- character(0)
+  for (k in seq_len(ncol(x))) {
+    n <- colSums(obs & (x[, k] != 0))
+    if (any(n == 0)) out <- c(out, paste0(colnames(dat)[n == 0], " x ", colnames(x)[k]))
+  }
+  out
+}
+
 .prepare_cluster <- function(cluster, person_data) {
   if (is.null(cluster)) return(NULL)
   if (is.character(cluster) && length(cluster) == 1 && cluster %in% names(person_data)) return(person_data[[cluster]])
@@ -135,7 +178,8 @@
 }
 
 # Everything mnlfa_ic() needs, checked.
-.prepare_all <- function(responses, person_data, person, item_data, item, cluster, control, na_action) {
+.prepare_all <- function(responses, person_data, person, item_data, item, cluster, control, na_action,
+                         weights = NULL, weight_by = NULL, replicate_weights = NULL) {
   dat <- .prepare_responses(responses)
   N0 <- nrow(dat)
   # without column names in `responses`, take item names from item_data
@@ -146,12 +190,21 @@
   cl <- .prepare_cluster(cluster, person_data)
   if (!is.null(cl) && length(cl) != N0)
     stop("`cluster` must have one value per person (", N0, ").", call. = FALSE)
-  drop_na <- pp$na_rows | (if (is.null(cl)) FALSE else is.na(cl))
+  w  <- .prepare_cluster(weights, person_data)            # vector or column name
+  wb <- .prepare_cluster(weight_by, person_data)
+  rw <- .prepare_replicates(replicate_weights, person_data, N0)
+  if (!is.null(w) && (!is.numeric(w) || length(w) != N0))
+    stop("`weights` must be numeric with one value per person (", N0, ").", call. = FALSE)
+  if (!is.null(wb) && length(wb) != N0) stop("`weight_by` must have one value per person (", N0, ").", call. = FALSE)
+  if (is.null(w) && (!is.null(wb) || !is.null(rw)))
+    stop("`weight_by` and `replicate_weights` need `weights`.", call. = FALSE)
+  if (!is.null(rw) && !is.null(cl)) stop("Use either `cluster` or `replicate_weights`, not both.", call. = FALSE)
+  drop_na <- pp$na_rows | (if (is.null(cl)) FALSE else is.na(cl)) | (if (is.null(wb)) FALSE else is.na(wb))
   if (any(drop_na)) {
     if (na_action == "fail")
-      stop(sum(drop_na), " person(s) have missing person covariates or cluster. Remove them, or use na_action = \"omit\".",
+      stop(sum(drop_na), " person(s) have missing person covariates, cluster or weight_by. Remove them, or use na_action = \"omit\".",
            call. = FALSE)
-    message("Dropping ", sum(drop_na), " person(s) with missing person covariates or cluster.")
+    message("Dropping ", sum(drop_na), " person(s) with missing person covariates, cluster or weight_by.")
   }
   no_resp <- rowSums(!is.na(dat)) == 0
   if (any(no_resp & !drop_na)) message("Dropping ", sum(no_resp & !drop_na), " person(s) with no responses.")
@@ -159,9 +212,21 @@
   dat <- dat[keep, , drop = FALSE]
   x <- .person_matrix(pp, keep)
   if (!is.null(cl)) cl <- cl[keep]
+  if (!is.null(w)) {
+    w <- w[keep]; if (!is.null(wb)) wb <- wb[keep]; if (!is.null(rw)) rw <- rw[keep, , drop = FALSE]
+    if (anyNA(w) || any(w < 0) || (!is.null(rw) && (anyNA(rw) || any(rw < 0))))
+      stop("Sampling and replicate weights must be non-negative and not missing.", call. = FALSE)
+    sw <- .scale_weights(w, rw, wb, control$weight_scale)
+    w <- sw$w; rw <- sw$rw
+  }
   p_item <- colMeans(dat, na.rm = TRUE)
   flat <- !is.finite(p_item) | p_item %in% c(0, 1)
   if (any(flat)) stop("Item(s) without variation in the responses: ", paste(colnames(dat)[flat], collapse = ", "), ".", call. = FALSE)
+  empty <- .empty_dif_cells(dat, x)
+  if (length(empty))
+    stop("No responses to these items among persons with a nonzero value of the person covariate, so their DIF ",
+         "cannot be estimated (e.g., items not administered in a country): ", paste(empty, collapse = ", "),
+         ". Remove the items, or the persons in that group.", call. = FALSE)
   sp <- .sparse_items(dat, x)
   if (length(sp))
     warning("Item(s) with fewer than 5 correct or incorrect responses overall or within a group of a binary ",
@@ -169,6 +234,7 @@
             ". Their DIF may be poorly determined; consider screening near-ceiling or near-floor items.", call. = FALSE)
   des <- .prepare_items(item, item_data, colnames(dat), control$item_omit, control$item_standardize)
   if (is.numeric(control$anchor) && control$anchor > ncol(dat)) stop("`anchor` exceeds the number of items.", call. = FALSE)
-  list(dat = dat, x = x, cluster = cl, design = des, kept = which(keep), person_terms = pp$tt,
+  list(dat = dat, x = x, cluster = cl, weights = w, weight_by = if (is.null(wb)) NULL else wb, replicates = rw,
+       design = des, kept = which(keep), person_terms = pp$tt,
        person_levels = stats::.getXlevels(pp$tt, pp$mf), N_input = N0)
 }

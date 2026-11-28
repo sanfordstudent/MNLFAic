@@ -11,7 +11,7 @@ infer(object, ...)
 
 \item{...}{Arguments of \code{\link[=mnlfa_control]{mnlfa_control()}} to change, e.g. \code{M = 5000},
 \code{center = "estimate"}, \code{seed = 2}. \code{item_omit}, \code{item_standardize},
-\code{anchor} and the Stage-1 numerical settings (\code{n_nodes} through
+\code{weight_scale}, \code{anchor} and the Stage-1 numerical settings (\code{n_nodes} through
 \code{fallback_em_iter}) cannot be changed here; they need a new call to
 \code{\link[=mnlfa_ic]{mnlfa_ic()}}.}
 }

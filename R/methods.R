@@ -5,23 +5,24 @@
   else "latent SD; + = harder for higher values of the person covariate"
 }
 
-# Covariance the reported inference uses: "cluster" or "model". From the
+# Covariance the reported inference uses: "cluster", "replicate" or "model". From the
 # Stage-3 settings when there is inference; otherwise what infer() would use
 # (the Stage-1 covariance, unless mnlfa_control(vcov = "model") overrides it).
 .vcov_used <- function(object) {
   used <- object$inference$settings$vcov_type
   if (!is.null(used)) return(used)
-  if (identical(object$stage1$vcov_type, "cluster") && !identical(object$control$vcov, "model")) "cluster" else "model"
+  type <- object$stage1$vcov_type
+  if (!is.null(type) && type %in% c("cluster", "replicate") && !identical(object$control$vcov, "model")) type else "model"
 }
 
 .need_inference <- function(object) {
   if (is.null(object$inference)) stop("No inference yet: run infer(object) or mnlfa_ic(..., inference = TRUE).", call. = FALSE)
 }
 
-# With a cluster-robust covariance: "sandwich" or "wild" (from the Stage-3
-# settings, else what infer() would use); NA otherwise.
+# With a design-based (cluster-robust or replicate) covariance: "sandwich" or
+# "wild" (from the Stage-3 settings, else what infer() would use); NA otherwise.
 .cluster_method_used <- function(object) {
-  if (.vcov_used(object) != "cluster") return(NA_character_)
+  if (.vcov_used(object) == "model") return(NA_character_)
   used <- object$inference$settings$cluster_method
   if (!is.null(used)) return(used)
   if (is.null(object$control$cluster_method)) "sandwich" else object$control$cluster_method
@@ -29,32 +30,45 @@
 
 .is_wild <- function(object) identical(.cluster_method_used(object), "wild")
 
-# Short label of the clustered inference for print() and summary().
+# Short label of the design-based inference for print() and summary(), e.g.
+# "cluster-robust, wild cluster bootstrap (30 clusters)" or
+# "replicate weights, JK2 (75 zones)"; "" for model-based inference.
 .cluster_label <- function(object) {
-  switch(.cluster_method_used(object), sandwich = "cluster-robust", wild = "cluster-robust, wild cluster bootstrap", "")
+  type <- .vcov_used(object); f <- object$stage1
+  if (type == "model") return("")
+  wild <- .is_wild(object)
+  if (type == "cluster" && isTRUE(f$cluster_is_person))
+    return(sprintf("robust%s", if (wild) ", wild bootstrap" else ""))
+  if (type == "cluster")
+    return(sprintf("cluster-robust%s (%d clusters)", if (wild) ", wild cluster bootstrap" else "", f$n_clusters))
+  units <- if (f$rep_method == "BRR") sprintf("%d replicates", f$replicate$n_replicates) else
+    sprintf("%d zones", f$replicate$n_units)
+  sprintf("replicate weights, %s%s (%s)", f$rep_method, if (wild) ", wild bootstrap" else "", units)
 }
 
 # Variance-impact or slope table from the wild bootstrap draws.
 .wild_table <- function(object, which, level) {
   .need_inference(object)
   if (!isTRUE(all.equal(level, object$control$level)))
-    stop("With the wild cluster bootstrap, intervals are available only at the inference level (",
+    stop("With the wild bootstrap, intervals are available only at the inference level (",
          object$control$level, "); use infer(object, level = ", level, ").", call. = FALSE)
   object$inference[[which]][, c("est", "se", "ci_low", "ci_high", "p")]
 }
 
 # Wald inference for Stage-1 parameters that Stage 2 leaves unchanged (variance
 # impact, slopes): estimate, SE, interval and p-value (H0: 0) from the Stage-1
-# covariance the inference uses; t with G - 1 df when it is cluster-robust.
+# covariance the inference uses; t when it is design-based (G - 1 df for
+# clusters, the replicate df for replicate weights).
 # idx indexes .stage1_index().
 .stage1_wald <- function(object, est, idx, level = object$control$level) {
   f <- object$stage1
-  cluster <- .vcov_used(object) == "cluster"
+  cluster <- .vcov_used(object) != "model"
   V <- .stage1_vcov(f, if (cluster) "auto" else "model")
+  df <- if (!is.null(f$t_df)) f$t_df else f$n_clusters - 1
   se <- sqrt(diag(V)[idx])
   est <- unname(est)
-  crit <- if (cluster) stats::qt(1 - (1 - level) / 2, f$n_clusters - 1) else stats::qnorm(1 - (1 - level) / 2)
-  p <- if (cluster) 2 * stats::pt(-abs(est / se), f$n_clusters - 1) else 2 * stats::pnorm(-abs(est / se))
+  crit <- if (cluster) stats::qt(1 - (1 - level) / 2, df) else stats::qnorm(1 - (1 - level) / 2)
+  p <- if (cluster) 2 * stats::pt(-abs(est / se), df) else 2 * stats::pnorm(-abs(est / se))
   data.frame(est = est, se = se, ci_low = est - crit * se, ci_high = est + crit * se, p = p, row.names = NULL)
 }
 
@@ -83,10 +97,13 @@ print.mnlfa_ic <- function(x, digits = 3, ...) {
   cat(sprintf("  %d persons, %d items; person covariates: %s\n", d$N, d$J, paste(d$covariates, collapse = ", ")))
   des <- x$coding$design
   cat("  item covariates:", if (is.null(des)) "none" else paste(names(des$coding), collapse = ", "), "\n")
+  if (!is.null(d$weights))
+    cat("  sampling weights", if (is.null(d$weight_by)) "" else
+          sprintf("(%s scaling within %d groups)", x$control$weight_scale, length(unique(d$weight_by))), "\n")
   cat(sprintf("  form: %s; Stage 1 %s (%d Newton steps, %d EM fallbacks)%s\n", x$control$form,
               if (f$convergence$converged) "converged" else "DID NOT CONVERGE",
               f$convergence$newton_iterations, f$convergence$em_fallbacks,
-              if (.vcov_used(x) == "cluster") sprintf("; %s (%d clusters)", .cluster_label(x), f$n_clusters) else ""))
+              if (.vcov_used(x) != "model") paste0("; ", .cluster_label(x)) else ""))
   cat("\nImpact on the latent mean (latent SD per unit):\n")
   if (is.null(x$inference)) {
     print(round(x$stage2$alpha, digits))
@@ -148,7 +165,7 @@ print.summary.mnlfa_ic <- function(x, digits = 3, ...) {
   cat("MNLFA-IC: anchor-free DIF analysis\n")
   cat(sprintf("%d persons, %d items, %d person covariate(s); form: %s; %g%% intervals%s\n", x$data$N, x$data$J,
               x$data$K, x$form, 100 * x$level,
-              if (identical(x$vcov_type, "cluster")) paste0("; ", x$cluster_label) else ""))
+              if (!identical(x$vcov_type, "model")) paste0("; ", x$cluster_label) else ""))
   if (!x$convergence$converged) cat("WARNING: Stage 1 did not converge (", x$convergence$stop_reason, ").\n", sep = "")
   cat("\nImpact on the latent mean (latent SD per unit of the covariate):\n"); print(rnd(x$impact), row.names = FALSE)
   cat(sprintf("\nImpact on the latent log-variance (%s):\n", if (identical(x$cluster_method, "wild")) "bootstrap" else "Wald"))
@@ -266,7 +283,7 @@ confint.mnlfa_ic <- function(object, parm = c("mean", "variance", "effects", "re
 #' @export
 vcov.mnlfa_ic <- function(object, ...) {
   f <- object$stage1; d <- object$data
-  V <- .stage1_vcov(f, if (.vcov_used(object) == "cluster") "auto" else "model")
+  V <- .stage1_vcov(f, if (.vcov_used(object) != "model") "auto" else "model")
   others <- setdiff(seq_len(d$J), f$anchor)
   nm <- c(paste0("impact:", d$covariates), paste0("logvar:", d$covariates), paste0("slope:", d$items),
           paste0("intercept:", d$items),

@@ -30,6 +30,9 @@
 #'   [mnlfa_ic()]).
 #' @param cluster For `mnlfa_fit()`: optional cluster identifier (currently an
 #'   experimental feature).
+#' @param weights,replicates For `mnlfa_fit()`: optional sampling weights (one
+#'   per person) and replicate weights (N x R matrix), used as given (no senate
+#'   or house rescaling; experimental). See [mnlfa_ic()].
 #' @param control Settings from [mnlfa_control()]. For `ml1_inference()`, the
 #'   form is taken from `control` (`mnlfa_control(form = )`), not from a `form`
 #'   argument.
@@ -97,12 +100,14 @@ NULL
 
 #' @rdname stage-functions
 #' @export
-mnlfa_fit <- function(responses, x, start = NULL, cluster = NULL, control = mnlfa_control()) {
+mnlfa_fit <- function(responses, x, start = NULL, cluster = NULL, weights = NULL, replicates = NULL,
+                      control = mnlfa_control()) {
   dat <- .prepare_responses(responses); attr(dat, "named") <- NULL; x <- as.matrix(x)
   if (nrow(x) != nrow(dat)) stop("`x` must have one row per person.", call. = FALSE)
   if (is.null(colnames(x))) colnames(x) <- paste0("x", seq_len(ncol(x)))
   if (is.null(start)) start <- .default_start(dat, ncol(x))
-  fit <- .fit_stage1(dat, x, start, anchor = control$anchor, cluster = cluster,
+  fit <- .fit_stage1(dat, x, start, anchor = control$anchor, cluster = cluster, weights = weights,
+                     replicates = replicates, replicate_method = control$replicate_method, fay = control$fay,
                      em_tol = control$em_tol, em_stall = control$em_stall, newton_tol = control$newton_tol,
                      max_newton = control$max_newton, n_nodes = control$n_nodes,
                      max_fallback = control$max_fallback, fallback_em_iter = control$fallback_em_iter,

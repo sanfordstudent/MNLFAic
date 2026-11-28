@@ -10,6 +10,12 @@
 # q_il are proportional to w_l exp(z_l^2) f_i(theta_il). Everything downstream
 # (item M-step, score, Louis information) needs only the node matrix Theta and
 # the weights q. Missing responses (NA) contribute nothing.
+#
+# Sampling weights w (one per person; default 1) multiply each person's
+# contribution to the log-likelihood, so they enter as w_i q_il wherever
+# posterior expectations are summed over persons (M-steps, score, Louis
+# information); q itself stays the posterior. With w = 1 every result is
+# unchanged to the last bit.
 
 # Posterior mode and curvature scale of theta for every person, by Newton's
 # method (the log-posterior is strictly concave; steps capped at 1).
@@ -32,8 +38,9 @@
 
 # Adaptive E-step. Returns list(q = N x n posterior weights, loglik, loglik_i,
 # Theta = N x n nodes, mode = posterior modes for warm starts).
-.estep_aq <- function(a, b, g, x, dat, beta, eta, n_nodes = 21, start = NULL) {
+.estep_aq <- function(a, b, g, x, dat, beta, eta, n_nodes = 21, start = NULL, w = NULL) {
   N <- nrow(dat)
+  if (is.null(w)) w <- rep(1, N)
   rule <- .gauss_hermite(n_nodes)
   obs  <- !is.na(dat); y0 <- ifelse(obs, dat, 0)
   lin0 <- rep(1, N) %*% t(b) + x %*% t(g)
@@ -51,7 +58,7 @@
   ew  <- exp(Lw - mx)
   tot <- rowSums(ew)
   ll_i <- log(sqrt(2) * pm$scale) + mx + log(tot)
-  list(q = ew / tot, loglik = sum(ll_i), loglik_i = ll_i, Theta = Theta, mode = pm$mode)
+  list(q = ew / tot, loglik = sum(w * ll_i), loglik_i = ll_i, Theta = Theta, mode = pm$mode)
 }
 
 # Expected complete-data log-likelihood of each item (J-vector).
@@ -69,8 +76,9 @@
 # Item M-step: `n_newton` Newton steps on each item's expected complete-data
 # log-likelihood, all items at once, with per-item step halving so that no
 # item's objective decreases. Item 1 (the anchor) has g fixed at 0.
-.mstep_items <- function(a, b, g, x, dat, q, Theta, n_newton = 2) {
+.mstep_items <- function(a, b, g, x, dat, q, Theta, n_newton = 2, w = NULL) {
   N <- nrow(dat); J <- ncol(dat); K <- ncol(x); m <- 2 + K
+  if (!is.null(w)) q <- w * q                # weighted posterior counts
   obs <- !is.na(dat); y0 <- ifelse(obs, dat, 0)
   pairs <- which(upper.tri(diag(m), diag = TRUE), arr.ind = TRUE)   # (u, v), u <= v
   Qold  <- .q_items(a, b, g, x, dat, Theta, q)
@@ -115,17 +123,18 @@
 # Structural M-step on fixed nodes: maximize sum_i sum_l q_il log N(theta_il;
 # x_i' beta, exp(x_i' eta)). beta given eta: weighted least squares; eta given
 # beta: Newton on a concave objective; alternated.
-.mstep_struct <- function(x, Theta, q, beta, eta, n_outer = 3, n_inner = 10) {
+.mstep_struct <- function(x, Theta, q, beta, eta, n_outer = 3, n_inner = 10, w = NULL) {
+  if (is.null(w)) w <- rep(1, nrow(x))
   E1 <- rowSums(q * Theta)
   for (o in seq_len(n_outer)) {
     s2   <- as.vector(exp(x %*% eta))
-    beta <- as.vector(solve(crossprod(x / s2, x), crossprod(x / s2, E1)))
+    beta <- as.vector(solve(crossprod((x * w) / s2, x), crossprod((x * w) / s2, E1)))
     mu   <- as.vector(x %*% beta)
     V    <- rowSums(q * (Theta - mu)^2)
     for (it in seq_len(n_inner)) {
       r    <- V * exp(-as.vector(x %*% eta))
-      grad <- crossprod(x, 0.5 * (r - 1))
-      hess <- crossprod(x * (0.5 * r), x)
+      grad <- crossprod(x, w * 0.5 * (r - 1))
+      hess <- crossprod(x * (w * 0.5 * r), x)
       step <- as.vector(solve(hess, grad))
       eta  <- eta + step
       if (max(abs(step)) < 1e-10) break
@@ -139,7 +148,7 @@
 # min_iter iterations, the change shrank by less than stall_ratio. EM is only a
 # warm start for Newton.
 .em_aq <- function(a, b, g, x, dat, beta, eta, n_nodes = 21, tol = 0.005,
-                   max_iter = 500, stall_ratio = NULL, min_iter = 3, verbose = FALSE) {
+                   max_iter = 500, stall_ratio = NULL, min_iter = 3, verbose = FALSE, w = NULL) {
   t0 <- proc.time()[3]
   J <- ncol(dat); K <- ncol(x)
   g <- if (is.null(dim(g))) matrix(g, J, K) else g
@@ -147,10 +156,10 @@
   mode <- NULL; prev_change <- Inf; stop_reason <- "max_iter"
   for (it in seq_len(max_iter)) {
     old <- c(a, b, g, beta, eta)
-    es  <- .estep_aq(a, b, g, x, dat, beta, eta, n_nodes, start = mode)
+    es  <- .estep_aq(a, b, g, x, dat, beta, eta, n_nodes, start = mode, w = w)
     mode <- es$mode
-    ip  <- .mstep_items(a, b, g, x, dat, es$q, es$Theta)
-    st  <- .mstep_struct(x, es$Theta, es$q, beta, eta)
+    ip  <- .mstep_items(a, b, g, x, dat, es$q, es$Theta, w = w)
+    st  <- .mstep_struct(x, es$Theta, es$q, beta, eta, w = w)
     a <- ip$a; b <- ip$b; g <- ip$g; beta <- st$beta; eta <- st$eta
     change <- max(abs(c(a, b, g, beta, eta) - old))
     if (verbose) message(sprintf("  EM %3d: loglik %.4f  max change %.2e  (%.1f s)",

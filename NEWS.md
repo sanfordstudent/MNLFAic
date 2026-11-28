@@ -1,5 +1,21 @@
 # MNLFAic (development version)
 
+* Experimental: sampling weights and replicate-weight variance, for
+  international assessments such as TIMSS, PIRLS and PISA. New arguments of
+  `mnlfa_ic()`: `weights`, `weight_by` (groups, usually countries, within
+  which the weights are rescaled; `mnlfa_control(weight_scale = )` chooses
+  senate (default) or house scaling) and `replicate_weights`
+  (`mnlfa_control(replicate_method = c("JK2", "JK2-half", "BRR"), fay = )`).
+  Stage 1 maximizes the weighted log-likelihood; the replicate covariance
+  uses a one-step approximation, so replicates are not refitted. Without
+  replicate weights, the covariance is weighted cluster-robust (with
+  `cluster =`) or weighted robust. `ilsa_replicates()` builds TIMSS/PIRLS
+  jackknife replicate weights from the zone variables. The wild bootstrap
+  (`cluster_method = "wild"`) also works with replicate weights.
+* `mnlfa_ic()` now stops when an item has no responses among persons with a
+  nonzero value of a person covariate (e.g., an item not administered in a
+  country), whose DIF cannot be estimated.
+
 * Experimental: score wild cluster bootstrap for clustered data,
   `mnlfa_control(cluster_method = "wild")`, also available without refitting
   through `infer(fit, cluster_method = "wild")`. Each draw combines the

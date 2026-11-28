@@ -11,6 +11,9 @@ mnlfa_ic(
   item_data = NULL,
   item = NULL,
   cluster = NULL,
+  weights = NULL,
+  weight_by = NULL,
+  replicate_weights = NULL,
   control = mnlfa_control(),
   inference = TRUE,
   start = NULL,
@@ -55,6 +58,21 @@ covariance for inference, or, with
 \code{mnlfa_control(cluster_method = "wild")}, a score wild cluster bootstrap.
 This is currently an experimental feature.}
 
+\item{weights}{Optional sampling weights (vector with one value per
+person, or the name of a column of \code{person_data}), e.g. the total student
+weight of an international assessment. Experimental; see Details.}
+
+\item{weight_by}{Optional groups within which the weights are rescaled
+(vector or column name), usually countries; see \code{weight_scale} in
+\code{\link[=mnlfa_control]{mnlfa_control()}}. Experimental.}
+
+\item{replicate_weights}{Optional replicate weights for the variance: a
+matrix or data frame with one row per person, or the names of columns of
+\code{person_data}. Needs \code{weights}; the replication method is set by
+\code{replicate_method} in \code{\link[=mnlfa_control]{mnlfa_control()}}. For TIMSS and PIRLS, which
+provide jackknife zones rather than replicate weights, see
+\code{\link[=ilsa_replicates]{ilsa_replicates()}}. Experimental.}
+
 \item{control}{Settings from \code{\link[=mnlfa_control]{mnlfa_control()}}.}
 
 \item{inference}{Run the bootstrap inference (Stage 3). If \code{FALSE}, only
@@ -89,6 +107,26 @@ with free DIF for every item and one item's DIF fixed at 0 for bookkeeping;
 (2) a weighted median regression that picks, among the solutions that fit
 equally well, the one satisfying the sparsity assumption; (3) a parametric
 bootstrap that repeats Stage 2 on each draw.
+
+\strong{Sampling weights (experimental).} With \code{weights}, Stage 1
+maximizes the weighted (pseudo-) log-likelihood, so the estimates refer to
+the population the weights describe. The model-based covariance is not
+valid with sampling weights, so the inference uses a design-based one:
+\itemize{
+\item with \code{replicate_weights}: the replicate-weight covariance. Each
+replicate's estimates are approximated by one Newton step from the
+full-sample estimates, so no refitting is needed;
+\item with \code{cluster} (e.g., schools): the weighted cluster-robust covariance,
+which ignores stratification and is therefore conservative;
+\item otherwise: a weighted robust covariance, with each person as a cluster.
+}
+
+The weights are first rescaled within the \code{weight_by} groups (senate or
+house; see \code{\link[=mnlfa_control]{mnlfa_control()}}), and the replicate weights by the same
+factors. When groups are pooled, as with countries in an international
+assessment, replicate r perturbs zone r in every group at once, as in the
+IEA's pooled analyses; this is valid because the groups are independent
+samples.
 }
 \examples{
 # Small example (a real analysis would use more persons, items and draws);

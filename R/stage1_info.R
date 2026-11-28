@@ -1,11 +1,13 @@
 # Stage-1 score and observed information. All take the quadrature nodes
-# Theta (N x n) and posterior weights q (N x n) of the current E-step.
+# Theta (N x n) and posterior weights q (N x n) of the current E-step, and
+# optional sampling weights w (N; default 1).
 # Packed layout: beta (K), eta (K), a (J), b (J), g_{2..J} row-major ((J-1) K).
 
 # Analytic score of the marginal log-likelihood (Fisher's identity: the
 # posterior expectation of the complete-data score).
-.score_stage1 <- function(a, b, g, x, dat, beta, eta, q, Theta) {
+.score_stage1 <- function(a, b, g, x, dat, beta, eta, q, Theta, w = NULL) {
   N <- nrow(dat); J <- ncol(dat); K <- ncol(x); n <- ncol(Theta)
+  if (!is.null(w)) q <- w * q              # the score is linear in each person's q
   mu_i   <- as.vector(x %*% beta)
   sig2_i <- as.vector(exp(x %*% eta))
   obs    <- !is.na(dat)
@@ -29,11 +31,12 @@
 }
 
 # Observed information by Louis' identity, anchor removed:
-#   I = sum_i E[-H_i | y_i] - sum_i Var(s_i | y_i),
+#   I = sum_i w_i E[-H_i | y_i] - sum_i w_i Var(s_i | y_i),
 # with the posterior variance of the complete-data score accumulated node by
 # node as cross-products.
-.info_stage1 <- function(a, b, g, x, dat, beta, eta, q, Theta) {
+.info_stage1 <- function(a, b, g, x, dat, beta, eta, q, Theta, w = NULL) {
   N <- nrow(dat); J <- ncol(dat); K <- ncol(x); n <- ncol(Theta)
+  if (is.null(w)) w <- rep(1, N)
   D <- 2 * K + 2 * J + (J - 1) * K
   mu_i  <- as.vector(x %*% beta); sig2 <- as.vector(exp(x %*% eta))
   obs <- !is.na(dat); y0 <- ifelse(obs, dat, 0)
@@ -55,14 +58,14 @@
   Sbar <- matrix(0, N, D)
   for (l in seq_len(n)) Sbar <- Sbar + q[, l] * score_l(l)
   VarS <- matrix(0, D, D)
-  for (l in seq_len(n)) VarS <- VarS + crossprod(sqrt(q[, l]) * (score_l(l) - Sbar))
+  for (l in seq_len(n)) VarS <- VarS + crossprod(sqrt(w * q[, l]) * (score_l(l) - Sbar))
 
   E_H  <- matrix(0, D, D)                  # expected negative complete-data Hessian
   E_r  <- rowSums(q * (Theta - mu_i))
   E_r2 <- rowSums(q * (Theta - mu_i)^2)
-  E_H[ix$beta, ix$beta] <- crossprod(x / sig2, x)
-  E_H[ix$eta,  ix$eta]  <- crossprod(x * (0.5 * E_r2 / sig2), x)
-  E_H[ix$beta, ix$eta]  <- crossprod(x * (E_r / sig2), x)
+  E_H[ix$beta, ix$beta] <- crossprod((x * w) / sig2, x)
+  E_H[ix$eta,  ix$eta]  <- crossprod(x * (w * 0.5 * E_r2 / sig2), x)
+  E_H[ix$beta, ix$eta]  <- crossprod(x * (w * E_r / sig2), x)
   E_H[ix$eta,  ix$beta] <- t(E_H[ix$beta, ix$eta])
   m <- 2 + K
   pairs <- which(upper.tri(diag(m), diag = TRUE), arr.ind = TRUE)
@@ -72,7 +75,7 @@
     P  <- stats::plogis(outer(th, a) + lin0)
     V  <- P * (1 - P) * obs
     Z  <- cbind(th, 1, x)
-    Hs <- Hs + crossprod(q[, l] * Z[, pairs[, 1], drop = FALSE] * Z[, pairs[, 2], drop = FALSE], V)
+    Hs <- Hs + crossprod(w * q[, l] * Z[, pairs[, 1], drop = FALSE] * Z[, pairs[, 2], drop = FALSE], V)
   }
   for (j in seq_len(J)) {
     Hj <- matrix(0, m, m); Hj[pairs] <- Hs[, j]; Hj[pairs[, 2:1]] <- Hs[, j]
@@ -85,7 +88,8 @@
 
 # Per-person scores of the marginal log-likelihood at a fit's estimates
 # (N x D, packed layout, item order as fitted: anchor first). Uses the fit's
-# final posterior weights and nodes. Column sums equal .score_stage1().
+# final posterior weights and nodes. Unweighted: with sampling weights w,
+# colSums(w * S) equals .score_stage1(..., w = w).
 .stage1_person_scores <- function(fit, dat, x) {
   a <- fit$alpha.vec; b <- fit$beta.vec; g <- fit$gamma.mat; q <- fit$post; Theta <- fit$nodes
   N <- nrow(dat); J <- ncol(dat); K <- ncol(x); n <- ncol(Theta)
